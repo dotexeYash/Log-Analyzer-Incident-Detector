@@ -1,0 +1,9 @@
+2026-11-03 01:20:00.050 [http-nio-8080-exec-1] INFO com.loganalyzer.security.AuthController - Authentication attempt for username: admin from IP 198.51.100.42
+2026-11-03 01:20:00.210 [http-nio-8080-exec-1] WARN com.loganalyzer.security.AuthService - Login failed for user admin: Bad credentials
+2026-11-03 01:20:01.030 [http-nio-8080-exec-2] WARN com.loganalyzer.security.AuthService - Login failed for user admin: Bad credentials
+2026-11-03 01:20:01.880 [http-nio-8080-exec-3] WARN com.loganalyzer.security.AuthService - Login failed for user admin: Bad credentials
+2026-11-03 01:20:02.450 [http-nio-8080-exec-4] ERROR com.loganalyzer.security.SecurityFilter - 401 Unauthorized: Brute-force attack pattern detected from source IP 198.51.100.42
+2026-11-03 01:20:03.110 [http-nio-8080-exec-5] ERROR com.loganalyzer.security.SecurityFilter - Access Denied: Unauthorized access attempt to /api/v1/internal/admin-keys
+2026-11-03 01:20:04.290 [http-nio-8080-exec-6] ERROR com.loganalyzer.security.SecurityFilter - 403 Forbidden: Invalid authentication token signature from IP 198.51.100.42
+2026-11-03 01:20:05.100 [http-nio-8080-exec-7] ERROR com.loganalyzer.security.WafFilter - Blocked suspicious SQLi payload in header X-User-Role: ' OR 1=1 --
+2026-11-03 01:20:08.500 [http-nio-8080-exec-8] WARN com.loganalyzer.security.RateLimiter - IP 198.51.100.42 exceeded rate limit threshold of 100 req/sec

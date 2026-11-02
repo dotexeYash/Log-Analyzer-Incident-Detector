@@ -1,0 +1,12 @@
+2026-11-03 01:30:00.010 [batch-import-worker-1] INFO com.loganalyzer.service.ImportService - Loading large analytics dataset batch #420 (size: 500,000 records)
+2026-11-03 01:30:15.220 [batch-import-worker-1] WARN com.loganalyzer.monitor.JvmMonitor - High memory utilization alert: 92% of maximum heap consumed (3.68 GB / 4.00 GB)
+2026-11-03 01:30:22.440 [G1-Young-GC] WARN com.loganalyzer.monitor.JvmMonitor - Prolonged GC overhead limit warning: Garbage collector spent 98.2% of CPU time
+2026-11-03 01:30:30.910 [batch-import-worker-1] ERROR com.loganalyzer.service.ImportService - Fatal error during dataset parsing: OutOfMemoryError
+java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.util.Arrays.copyOf(Arrays.java:3519)
+	at java.base/java.util.ArrayList.grow(ArrayList.java:237)
+	at java.base/java.util.ArrayList.add(ArrayList.java:467)
+	at com.loganalyzer.service.ImportService.processChunk(ImportService.java:128)
+	at com.loganalyzer.service.ImportService.lambda$execute$0(ImportService.java:64)
+2026-11-03 01:30:31.050 [batch-import-worker-2] ERROR com.loganalyzer.service.ImportService - Fatal failure: java.lang.OutOfMemoryError: Java heap space
+2026-11-03 01:30:35.000 [main] FATAL com.loganalyzer.service.ApplicationLifecycle - Unhandled OutOfMemoryError in worker thread pool. JVM instability detected.

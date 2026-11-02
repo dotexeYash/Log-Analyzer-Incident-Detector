@@ -1,0 +1,12 @@
+2026-11-03 01:00:01.100 [main] INFO com.loganalyzer.service.ApplicationLifecycle - Application starting on port 8080 with profile [production]
+2026-11-03 01:00:02.340 [main] INFO com.loganalyzer.config.DatabaseConfig - Initializing HikariDataSource pool size: 20
+2026-11-03 01:00:03.112 [main] INFO com.loganalyzer.service.ApplicationLifecycle - Started Application in 2.012 seconds (process running for 2.65)
+2026-11-03 01:01:10.450 [http-nio-8080-exec-1] INFO com.loganalyzer.controller.HealthController - Health check OK - all subsystems operational
+2026-11-03 01:02:15.620 [http-nio-8080-exec-2] DEBUG com.loganalyzer.service.UserService - Fetching profile for user 1042
+2026-11-03 01:03:00.812 [http-nio-8080-exec-3] INFO com.loganalyzer.service.OrderService - Order 88291 created successfully for customer 1042
+2026-11-03 01:04:12.190 [http-nio-8080-exec-4] WARN com.loganalyzer.service.PaymentGatewayClient - Payment gateway response time elevated: 420ms (threshold: 300ms)
+2026-11-03 01:05:00.005 [scheduled-task-1] INFO com.loganalyzer.cron.DataSyncJob - Nightly synchronization job completed in 1420ms
+2026-11-03 01:06:22.770 [http-nio-8080-exec-5] INFO com.loganalyzer.controller.HealthController - Health check OK - all subsystems operational
+2026-11-03 01:07:44.200 [http-nio-8080-exec-6] DEBUG com.loganalyzer.service.InventoryService - Inventory count updated for SKU-9912
+2026-11-03 01:08:19.330 [http-nio-8080-exec-7] INFO com.loganalyzer.service.OrderService - Order 88292 processed and dispatched
+2026-11-03 01:09:55.990 [http-nio-8080-exec-8] INFO com.loganalyzer.controller.HealthController - Health check OK - all subsystems operational

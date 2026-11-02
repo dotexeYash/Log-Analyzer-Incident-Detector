@@ -1,0 +1,14 @@
+2026-11-03 01:15:00.100 [http-nio-8080-exec-1] INFO com.loganalyzer.service.OrderService - Incoming checkout request for user 5510
+2026-11-03 01:15:05.220 [http-nio-8080-exec-2] WARN com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Connection is not available, request timed out after 5000ms
+2026-11-03 01:15:06.110 [http-nio-8080-exec-3] ERROR com.loganalyzer.repository.OrderRepository - SQLException: Connection pool exhausted. Active connections: 20/20
+	at com.zaxxer.hikari.pool.HikariPool.getConnection(HikariPool.java:186)
+	at com.zaxxer.hikari.HikariDataSource.getConnection(HikariDataSource.java:100)
+	at com.loganalyzer.repository.OrderRepository.save(OrderRepository.java:42)
+2026-11-03 01:15:07.410 [http-nio-8080-exec-4] ERROR com.loganalyzer.service.PaymentService - SQLException: CannotAcquireLockException: Deadlock found when trying to get lock
+	at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2361)
+	at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:355)
+2026-11-03 01:15:08.550 [http-nio-8080-exec-5] ERROR com.loganalyzer.service.OrderService - Failed to process checkout for user 5511: Connection pool timeout
+2026-11-03 01:15:09.120 [http-nio-8080-exec-6] ERROR com.loganalyzer.service.OrderService - Failed to process checkout for user 5512: Connection pool timeout
+2026-11-03 01:15:10.220 [http-nio-8080-exec-7] ERROR com.loganalyzer.service.OrderService - Failed to process checkout for user 5513: Connection pool timeout
+2026-11-03 01:15:11.890 [http-nio-8080-exec-8] ERROR com.loganalyzer.service.OrderService - Failed to process checkout for user 5514: Connection pool timeout
+2026-11-03 01:15:15.300 [http-nio-8080-exec-9] ERROR com.loganalyzer.controller.HealthController - Subsystem DATABASE DOWN: Communications link failure during commit
