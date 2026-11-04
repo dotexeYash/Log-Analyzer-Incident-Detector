@@ -1,37 +1,121 @@
 # 🔍 Log Analyzer & Incident Detector
 
-A high-performance, modular Java 21 application engineered to parse application logs, detect anomalous patterns and bursts, categorize critical operational incidents with actionable remediation steps, and generate executive reports in Console, Markdown, and JSON formats.
+**Turn raw application logs into actionable operational insights using Java 21.**
+
+A modular Java application that analyzes application logs, detects anomalous patterns, identifies critical operational incidents, and generates detailed reports with actionable remediation recommendations.
+
+
+
+\
 
 ---
 
-## 🌟 Key Features
+## 📌 Overview
 
-1. **Log Parsing & Streaming:**
-   * Enterprise-grade regex parser supporting standard Spring/Logback, bracketed, ISO-8601, and custom timestamp formats.
-   * Multi-line stack trace stitching: automatically links nested exceptions and stack traces to parent error records.
-   * Resilient parsing: gracefully handles malformed or unformatted lines without crashing.
+Application logs contain valuable information about system health, failures, and security events. However, identifying meaningful patterns across multiple log entries can be difficult.
 
-2. **Error & Warning Detection:**
-   * Accurate classification across `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, and `FATAL` levels.
-   * Message normalization: strips dynamic UUIDs, memory addresses, and timestamps to group and rank recurring errors.
+**Log Analyzer & Incident Detector** automates this process by:
 
-3. **Behavioral Anomaly Detection:**
-   * **Error Burst Detection:** Identifies rapid error spikes exceeding configurable thresholds within a sliding time window.
-   * **Identical Failure Clustering:** Detects high-frequency repeating exceptions and failures.
-   * **Resource Exhaustion:** Detects `OutOfMemoryError`, heap saturation, GC overhead limit violations, and thread exhaustion.
-   * **Security Threat Surge:** Flags coordinated authentication failures, 401/403 surges, brute-force attempts, and suspicious SQLi patterns.
-   * **Database Outage Spikes:** Detects connection pool starvation (HikariCP timeouts), SQL exceptions, and deadlocks.
-   * **Service Latency / Timeout Surges:** Detects network connection refused, socket timeouts, and 504 Gateway errors.
+* Parsing application log files.
+* Analyzing errors, warnings, and recurring failures.
+* Detecting unusual activity and error bursts.
+* Identifying memory, database, and security-related incidents.
+* Assigning incident severity levels.
+* Providing evidence and remediation recommendations.
+* Generating reports in multiple formats.
 
-4. **Incident Categorization & Triage:**
-   * Synthesizes anomalies into operational incidents ranked by severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
-   * Categorizes incidents into `MEMORY_CRITICAL_FAILURE`, `DATABASE_OUTAGE`, `SECURITY_BREACH_ATTEMPT`, `NETWORK_SERVICE_DEGRADATION`, and `APPLICATION_CRASH`.
-   * Correlates root-cause log snippets and generates actionable remediation recommendations.
+---
 
-5. **Multi-Format Operational Reports:**
-   * **Console Dashboard:** High-visibility ASCII summary cards, level distribution tables, top errors, anomalies, and incident triage recommendations.
-   * **Markdown Reports:** GitHub-flavored markdown with summary tables, alerts (`> [!CAUTION]`), and remediation checklists.
-   * **JSON Reports:** Structured machine-readable schema ready for SIEM ingestion (Splunk, Elastic, Datadog) or CI/CD pipelines.
+## ✨ Key Features
+
+### 1. Log Parsing
+
+* Supports standard Spring/Logback and bracketed log formats.
+* Handles ISO-8601 and other supported timestamp formats.
+* Associates multiline stack traces with their parent log entries.
+* Handles malformed or unformatted lines without stopping the entire analysis.
+
+### 2. Error & Warning Analysis
+
+* Classifies `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, and `FATAL` log levels.
+* Calculates error and warning percentages.
+* Identifies frequently recurring errors.
+* Normalizes dynamic identifiers to group similar failures.
+
+### 3. Anomaly Detection
+
+| Anomaly             | Description                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| Error Burst         | Detects unusually high error frequency within a configurable time window.                       |
+| Repeated Failures   | Identifies recurring exceptions and failure patterns.                                           |
+| Memory Exhaustion   | Detects JVM Out Of Memory Error and GC overhead issues.                                         |
+| Security Activity   | Identifies suspicious authentication failures, unauthorized access, and SQL injection patterns. |
+| Database Failures   | Detects connection pool exhaustion, SQL exceptions, and deadlocks.                              |
+| Network Degradation | Identifies connection failures, socket timeouts, and gateway errors.                            |
+
+### 4. Incident Detection & Prioritization
+
+Detected anomalies are translated into actionable operational incidents.
+
+**Severity levels:**
+
+* 🔴 `CRITICAL`
+* 🟠 `HIGH`
+* 🟡 `MEDIUM`
+* 🟢 `LOW`
+
+**Incident categories include:**
+
+* `MEMORY_CRITICAL_FAILURE`
+* `DATABASE_OUTAGE`
+* `SECURITY_BREACH_ATTEMPT`
+* `NETWORK_SERVICE_DEGRADATION`
+* `APPLICATION_CRASH`
+
+Each incident includes supporting log evidence and remediation recommendations.
+
+### 5. Multi-Format Reporting
+
+| Format   | Purpose                                      |
+| -------- | -------------------------------------------- |
+| Console  | Terminal-based analysis dashboard            |
+| Markdown | Readable incident documentation              |
+| JSON     | Structured machine-readable analysis results |
+
+---
+
+## 🏗️ Architecture
+
+The application follows a modular architecture with separate components for parsing, analysis, incident detection, and report generation.
+
+```mermaid
+flowchart TD
+    A["Application Log Files"] --> B["Standard Log Parser"]
+    B --> C["Log Entry Models"]
+    C --> D["Log Analyzer"]
+    D --> E["Statistics Aggregator"]
+    D --> F["Anomaly Detector"]
+    F --> G["Incident Detector"]
+    E --> H["Analysis Result"]
+    G --> H
+    H --> I["Report Generator"]
+    I --> J["Console Report"]
+    I --> K["Markdown Report"]
+    I --> L["JSON Report"]
+```
+
+### Main Components
+
+| Component                 | Responsibility                                  |
+| ------------------------- | ----------------------------------------------- |
+| `StandardLogParser`       | Parses log records and multiline stack traces.  |
+| `LogAnalyzer`             | Coordinates the analysis workflow.              |
+| `StatisticsAggregator`    | Calculates log statistics and recurring errors. |
+| `AnomalyDetector`         | Identifies unusual log patterns and bursts.     |
+| `IncidentDetector`        | Categorizes incidents and assigns severity.     |
+| `ConsoleReportGenerator`  | Generates terminal reports.                     |
+| `MarkdownReportGenerator` | Generates Markdown reports.                     |
+| `JsonReportGenerator`     | Generates JSON reports.                         |
 
 ---
 
@@ -39,160 +123,226 @@ A high-performance, modular Java 21 application engineered to parse application 
 
 ```text
 Log-Analyzer-Incident-Detector/
+│
 ├── .gitignore
 ├── pom.xml
 ├── README.md
-├── sample-logs/                                      # Realistic log scenarios
-│   ├── normal-operations.log                         # Healthy service baseline
-│   ├── critical-incident-database.log                # Connection starvation & deadlocks
-│   ├── security-attack.log                           # Brute-force & unauthorized bursts
-│   └── out-of-memory.log                             # JVM heap exhaustion & OOM crashes
+│
+├── sample-logs/
+│   ├── normal-operations.log
+│   ├── critical-incident-database.log
+│   ├── security-attack.log
+│   └── out-of-memory.log
+│
 └── src/
     ├── main/
     │   ├── java/com/loganalyzer/
-    │   │   ├── Main.java                             # CLI application entry point
+    │   │   ├── Main.java
     │   │   ├── analyzer/
-    │   │   │   ├── AnomalyDetector.java              # Pattern & burst anomaly engine
-    │   │   │   ├── IncidentDetector.java             # Incident triage & prioritization
-    │   │   │   ├── LogAnalyzer.java                  # Central orchestration facade
-    │   │   │   └── StatisticsAggregator.java         # Metric aggregation & error normalization
     │   │   ├── exception/
-    │   │   │   ├── InvalidLogFileException.java      # File validation errors
-    │   │   │   ├── LogAnalyzerException.java         # Base domain exception
-    │   │   │   └── LogParseException.java            # Malformed line exception
     │   │   ├── model/
-    │   │   │   ├── AnalysisResult.java               # Container for complete analysis output
-    │   │   │   ├── Anomaly.java                      # Anomaly model with score & evidence
-    │   │   │   ├── AnomalyType.java                  # Enumeration of anomaly categories
-    │   │   │   ├── Incident.java                     # Actionable incident model
-    │   │   │   ├── IncidentCategory.java             # Incident classifications
-    │   │   │   ├── IncidentSeverity.java             # CRITICAL, HIGH, MEDIUM, LOW
-    │   │   │   ├── LogEntry.java                     # Parsed log record with stack trace
-    │   │   │   ├── LogLevel.java                     # Log levels with severity rankings
-    │   │   │   └── LogStatistics.java                # Aggregated metrics & distributions
     │   │   ├── parser/
-    │   │   │   ├── LogParser.java                    # Parser contract interface
-    │   │   │   └── StandardLogParser.java            # Multi-format & multi-line parser
     │   │   └── report/
-    │   │       ├── ConsoleReportGenerator.java       # ASCII operational dashboard
-    │   │       ├── JsonReportGenerator.java          # SIEM-ready JSON serializer
-    │   │       ├── MarkdownReportGenerator.java      # GitHub-flavored Markdown
-    │   │       └── ReportGenerator.java              # Report generator interface
+    │   │
     │   └── resources/
-    │       └── sample-logs/                          # Packaged classpath test logs
+    │       └── sample-logs/
+    │
     └── test/
         └── java/com/loganalyzer/
             ├── analyzer/
-            │   ├── AnomalyDetectorTest.java          # Burst, security, DB & OOM tests
-            │   ├── IncidentDetectorTest.java         # Triage & recommendation verification
-            │   └── StatisticsAggregatorTest.java     # Metrics & normalization tests
             ├── integration/
-            │   └── LogAnalyzerEndToEndTest.java      # End-to-end scenario validation
             ├── parser/
-            │   └── StandardLogParserTest.java        # Multi-format & stack trace parsing tests
             └── report/
-                └── ReportGeneratorTest.java          # Console, Markdown & JSON tests
 ```
 
 ---
 
-## 🛠️ Prerequisites
+## ⚙️ Prerequisites
 
-* **Java Development Kit (JDK):** Version 21 or higher
-* **Apache Maven:** Version 3.8+ (or 3.10+)
+Make sure you have the following installed:
 
-Verify your local installation:
-```powershell
+* **Java Development Kit:** JDK 21 or higher
+* **Apache Maven:** 3.8 or higher
+* **Git:** For cloning the repository
+
+Verify your installations:
+
+```bash
 java -version
 mvn -version
+git --version
 ```
 
 ---
 
-## 🚀 Build Instructions
+## 🚀 Getting Started
 
-Navigate to the project root directory:
-```powershell
-cd "c:\Users\YASH\Desktop\log analyser\Log-Analyzer-Incident-Detector"
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/dotexeYash/Log-Analyzer-Incident-Detector.git
 ```
 
-Compile the project, execute all unit and integration tests, and package the executable JAR:
-```powershell
+### 2. Navigate to the Project
+
+```bash
+cd Log-Analyzer-Incident-Detector
+```
+
+### 3. Build the Application
+
+```bash
 mvn clean package
 ```
 
-To run tests only:
-```powershell
-mvn clean test
-```
+This compiles the project, executes the automated tests, and packages the application into an executable JAR.
 
----
+### 4. Run the Application
 
-## 💻 Running the Application
-
-### 1. Built-in Demonstration Mode
-Runs the analysis against all 4 bundled scenario logs (`normal`, `database outage`, `security attack`, `out-of-memory`):
-```powershell
+```bash
 java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
 ```
 
-### 2. Inspect a Specific Log File
-Analyze any custom log file with the default console dashboard:
-```powershell
-java -jar target/log-analyzer-incident-detector-1.0.0.jar --file sample-logs/critical-incident-database.log
+---
+
+## 💻 Usage Examples
+
+### 1. Run Demonstration Mode
+
+Analyze the bundled sample scenarios:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
+```
+
+### 2. Analyze a Specific Log File
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/critical-incident-database.log
 ```
 
 ### 3. Generate a Markdown Report
-Generate a GitHub-flavored Markdown report and save it to disk:
-```powershell
-java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/security-attack.log -fmt markdown -o reports/security-incident.md
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/security-attack.log -fmt markdown -o security-report.md
 ```
 
-### 4. Generate a JSON Report (SIEM Integration)
-Output structured JSON for piping or ingest:
-```powershell
-java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/out-of-memory.log -fmt json -o reports/oom-analysis.json
+### 4. Generate a JSON Report
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/out-of-memory.log -fmt json -o oom-report.json
 ```
 
-### 5. Custom Anomaly Thresholds
-Adjust sliding window time (in seconds) and error burst trigger thresholds:
-```powershell
-java -jar target/log-analyzer-incident-detector-1.0.0.jar -f /var/log/application.log --burst-threshold 10 --window 120
+### 5. Configure Anomaly Detection Thresholds
+
+Customize the error burst threshold and detection window:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/security-attack.log -b 10 -w 120
 ```
+
+Example:
+
+* `-b 10` — Set the error burst threshold to 10.
+* `-w 120` — Set the detection window to 120 seconds.
 
 ---
 
-## 📊 Command-Line Options Reference
+## 📖 Command-Line Reference
 
-| Option | Flag | Description | Default |
-| :--- | :--- | :--- | :--- |
-| `--file <path>` | `-f` | Path to log file to analyze | *None (Required unless `--demo`)* |
-| `--format <type>` | `-fmt` | Output format: `console`, `markdown` (`md`), `json` | `console` |
-| `--output <path>` | `-o` | Optional file path to save report output | *stdout* |
-| `--burst-threshold <n>`| `-b` | Number of errors within time window to trigger burst | `5` |
-| `--window <sec>` | `-w` | Time window (seconds) for burst anomaly detection | `60` |
-| `--demo` | | Execute demonstration against all bundled sample scenarios | `false` |
-| `--help` | `-h` | Display usage instructions and CLI options | |
+| Option                  | Short Flag | Description                            | Default                   |
+| ----------------------- | ---------- | -------------------------------------- | ------------------------- |
+| `--file <path>`         | `-f`       | Input log file                         | Required unless demo mode |
+| `--format <type>`       | `-fmt`     | Output format: `console`, `md`, `json` | `console`                 |
+| `--output <path>`       | `-o`       | Save report to a file                  | Standard output           |
+| `--burst-threshold <n>` | `-b`       | Error burst threshold                  | `5`                       |
+| `--window <seconds>`    | `-w`       | Burst detection time window            | `60`                      |
+| `--demo`                | —          | Run bundled demonstration scenarios    | `false`                   |
+| `--help`                | `-h`       | Display usage instructions             | —                         |
+
+**Supported report formats:** `console`, `md`, and `json`. The `markdown` format name is also supported.
 
 ### Exit Codes
-* `0`: Analysis completed cleanly; no critical incidents found.
-* `1`: Invalid arguments, missing file, or execution error.
-* `2`: One or more **CRITICAL** operational incidents detected (useful for automated CI/CD deployment gates or alerting scripts).
+
+| Code | Meaning                                              |
+| ---- | ---------------------------------------------------- |
+| `0`  | Analysis completed without critical issues.          |
+| `1`  | Invalid arguments, input, or execution error.        |
+| `2`  | One or more critical operational incidents detected. |
 
 ---
 
 ## 🧪 Testing
 
-The project includes unit and integration tests covering:
-* Single-line and multi-line parsing with stack traces.
-* ISO-8601, bracketed, and standard timestamp formats.
-* Sliding window burst anomaly detection.
-* Security threat identification (SQLi, brute-force, unauthorized access).
-* JVM resource exhaustion and database pool starvation detection.
-* Report rendering across Console, Markdown, and JSON.
-* End-to-end integration tests on real-world log scenarios.
+The project includes unit and integration tests covering the major application components.
 
-Run tests using:
-```powershell
+### Test Coverage Areas
+
+* Standard and multiline log parsing.
+* Timestamp format handling.
+* Sliding-window error burst detection.
+* Security threat identification.
+* JVM resource exhaustion detection.
+* Database connection pool failure detection.
+* Incident categorization and recommendations.
+* Console, Markdown, and JSON report generation.
+* End-to-end analysis workflows.
+
+### Run the Tests
+
+```bash
 mvn test
 ```
+
+### Verified Test Results
+
+The project has successfully completed its current automated test suite.
+
+| Metric         |  Result |
+| -------------- | ------: |
+| Tests executed |      23 |
+| Failures       |       0 |
+| Errors         |       0 |
+| Skipped        |       0 |
+| Build status   | SUCCESS |
+
+### Manual Verification
+
+The following scenarios have also been manually tested:
+
+| Scenario                           | Observed Result                                                    |
+| ---------------------------------- | ------------------------------------------------------------------ |
+| Normal application logs            | Classified as healthy, with no anomalies or incidents.             |
+| JVM memory exhaustion              | Critical memory incident detected.                                 |
+| Suspicious authentication activity | High-severity security incident detected.                          |
+| Database connection failures       | Critical database outage detected.                                 |
+| Custom error burst threshold       | Detection behavior changed as expected when the threshold changed. |
+| Markdown report generation         | Report successfully generated.                                     |
+| JSON report generation             | Report successfully generated and parsed as valid JSON.            |
+
+---
+
+## 🔮 Future Improvements
+
+Potential areas for further development:
+
+* Add a graphical dashboard for log analysis.
+* Support additional log formats and configurable parsing rules.
+* Introduce real-time log monitoring.
+* Add configurable alerting and notification integrations.
+* Add more extensive performance and large-file testing.
+* Support additional report formats and integrations.
+
+---
+
+## 👨‍💻 Author
+
+**Yash Lowanshi**
+
+B.Tech — Computer Science and Engineering
+
+GitHub: [@dotexeYash](https://github.com/dotexeYash)
+
+---
+
+*Built with Java 21 and Apache Maven.*
