@@ -31,3 +31,7 @@ target/
 # Keep sample test log files
 !sample-logs/*.log
 !src/main/resources/sample-logs/*.log
+
+# Generated analysis reports
+security-report.md
+security-report.json
