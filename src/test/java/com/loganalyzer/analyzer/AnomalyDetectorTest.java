@@ -80,6 +80,59 @@ class AnomalyDetectorTest {
     }
 
     @Test
+    @DisplayName("INFO messages containing 'unauthorized' must not trigger a security anomaly")
+    void testInfoMessagesContainingUnauthorizedDoNotTriggerSecurityAnomaly() {
+        List<LogEntry> entries = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            entries.add(LogEntry.builder()
+                    .lineNumber(i + 1)
+                    .timestamp(LocalDateTime.now().plusSeconds(i))
+                    .level(LogLevel.INFO)
+                    .message("User requested unauthorized resource, redirected to login page")
+                    .build());
+        }
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        boolean hasSecurityAnomaly = anomalies.stream()
+                .anyMatch(a -> a.getType() == AnomalyType.SECURITY_SUSPICIOUS_ACCESS);
+        assertFalse(hasSecurityAnomaly, "INFO messages containing 'unauthorized' must not be flagged as security anomalies");
+    }
+
+    @Test
+    @DisplayName("DEBUG messages containing 'forbidden' must not trigger a security anomaly")
+    void testDebugMessagesContainingForbiddenDoNotTriggerSecurityAnomaly() {
+        List<LogEntry> entries = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            entries.add(LogEntry.builder()
+                    .lineNumber(i + 1)
+                    .timestamp(LocalDateTime.now().plusSeconds(i))
+                    .level(LogLevel.DEBUG)
+                    .message("Evaluating security filter: path /public is forbidden=false")
+                    .build());
+        }
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        boolean hasSecurityAnomaly = anomalies.stream()
+                .anyMatch(a -> a.getType() == AnomalyType.SECURITY_SUSPICIOUS_ACCESS);
+        assertFalse(hasSecurityAnomaly, "DEBUG messages containing 'forbidden' must not be flagged as security anomalies");
+    }
+
+    @Test
+    @DisplayName("ERROR messages containing suspicious authentication activity should be detected")
+    void testErrorMessagesContainingSuspiciousAuthActivityTriggerSecurityAnomaly() {
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).level(LogLevel.ERROR).message("401 Unauthorized: Brute-force attack pattern detected from IP 10.0.0.1").build(),
+                LogEntry.builder().lineNumber(2).level(LogLevel.ERROR).message("Access Denied: Unauthorized access attempt to /api/v1/internal/admin-keys").build(),
+                LogEntry.builder().lineNumber(3).level(LogLevel.ERROR).message("403 Forbidden: Invalid authentication token signature").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        boolean hasSecurityAnomaly = anomalies.stream()
+                .anyMatch(a -> a.getType() == AnomalyType.SECURITY_SUSPICIOUS_ACCESS);
+        assertTrue(hasSecurityAnomaly, "ERROR logs containing security attack signatures must be detected");
+    }
+
+    @Test
     @DisplayName("Should detect database failure spike when DB errors exceed threshold")
     void testDetectDatabaseSpike() {
         List<LogEntry> entries = List.of(

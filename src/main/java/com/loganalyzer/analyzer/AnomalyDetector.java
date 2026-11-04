@@ -3,6 +3,7 @@ package com.loganalyzer.analyzer;
 import com.loganalyzer.model.Anomaly;
 import com.loganalyzer.model.AnomalyType;
 import com.loganalyzer.model.LogEntry;
+import com.loganalyzer.model.LogLevel;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -90,11 +91,12 @@ public class AnomalyDetector {
                 counter
         );
 
-        // 4. Security Anomalies
+        // 4. Security Anomalies (only consider WARN, ERROR, and FATAL entries to avoid false positives on INFO/DEBUG)
         detectPatternAnomalies(
                 entries,
                 SECURITY_PATTERN,
                 AnomalyType.SECURITY_SUSPICIOUS_ACCESS,
+                LogLevel.WARN,
                 securityThreshold,
                 0.85,
                 "Elevated frequency of unauthorized or suspicious access attempts",
@@ -241,8 +243,23 @@ public class AnomalyDetector {
                                         String description,
                                         List<Anomaly> anomalies,
                                         AtomicInteger counter) {
+        detectPatternAnomalies(entries, pattern, anomalyType, null, threshold, baseScore, description, anomalies, counter);
+    }
+
+    private void detectPatternAnomalies(List<LogEntry> entries,
+                                        Pattern pattern,
+                                        AnomalyType anomalyType,
+                                        LogLevel minimumLevel,
+                                        int threshold,
+                                        double baseScore,
+                                        String description,
+                                        List<Anomaly> anomalies,
+                                        AtomicInteger counter) {
         List<LogEntry> matched = new ArrayList<>();
         for (LogEntry entry : entries) {
+            if (minimumLevel != null && !entry.getLevel().isAtLeast(minimumLevel)) {
+                continue;
+            }
             String combined = entry.getCombinedMessage();
             if (pattern.matcher(combined).find()) {
                 matched.add(entry);
