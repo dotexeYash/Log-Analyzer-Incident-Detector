@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -140,50 +141,57 @@ public class AnomalyDetector {
             return;
         }
 
-        boolean hasTimestamps = errorEntries.stream().anyMatch(e -> e.getTimestamp() != null);
+        // Sort timestamped error entries locally without modifying the original input entries list
+        List<LogEntry> sortedTimestampedErrors = errorEntries.stream()
+                .filter(e -> e.getTimestamp() != null)
+                .sorted(Comparator.comparing(LogEntry::getTimestamp).thenComparingLong(LogEntry::getLineNumber))
+                .toList();
 
-        if (hasTimestamps) {
-            int i = 0;
-            while (i < errorEntries.size()) {
-                LogEntry startEntry = errorEntries.get(i);
-                LocalDateTime startTs = startEntry.getTimestamp();
-                if (startTs == null) {
-                    i++;
-                    continue;
-                }
+        if (!sortedTimestampedErrors.isEmpty()) {
+            int n = sortedTimestampedErrors.size();
+            int left = 0;
+            Duration maxWindowDuration = Duration.ofSeconds(windowSeconds);
 
-                LocalDateTime endWindow = startTs.plusSeconds(windowSeconds);
-                List<LogEntry> windowErrors = new ArrayList<>();
+            // Tracks the active merged burst index interval [burstStartIdx, burstEndIdx]
+            int burstStartIdx = -1;
+            int burstEndIdx = -1;
 
-                int j = i;
-                while (j < errorEntries.size()) {
-                    LogEntry curr = errorEntries.get(j);
-                    if (curr.getTimestamp() != null && !curr.getTimestamp().isAfter(endWindow)) {
-                        windowErrors.add(curr);
-                        j++;
+            for (int right = 0; right < n; right++) {
+                LocalDateTime rightTs = sortedTimestampedErrors.get(right).getTimestamp();
+
+                // Shrink window from the left until duration <= windowSeconds (exact duration comparison)
+                while (left <= right) {
+                    LocalDateTime leftTs = sortedTimestampedErrors.get(left).getTimestamp();
+                    if (Duration.between(leftTs, rightTs).compareTo(maxWindowDuration) > 0) {
+                        left++;
                     } else {
                         break;
                     }
                 }
 
-                if (windowErrors.size() >= errorBurstThreshold) {
-                    LocalDateTime actualEnd = windowErrors.get(windowErrors.size() - 1).getTimestamp();
-                    double score = Math.min(1.0, 0.5 + (windowErrors.size() / 20.0));
-                    anomalies.add(new Anomaly(
-                            "ANOM-" + counter.getAndIncrement(),
-                            AnomalyType.ERROR_BURST,
-                            String.format("Error burst: %d errors within %d seconds (threshold: %d)",
-                                    windowErrors.size(), windowSeconds, errorBurstThreshold),
-                            startTs,
-                            actualEnd,
-                            windowErrors.size(),
-                            windowErrors.subList(0, Math.min(5, windowErrors.size())),
-                            score
-                    ));
-                    i = j; // Advance past this burst window
-                } else {
-                    i++;
+                int currentWindowCount = right - left + 1;
+
+                // Check if current sliding window meets the burst threshold
+                if (currentWindowCount >= errorBurstThreshold) {
+                    if (burstStartIdx == -1) {
+                        // Initialize first active burst interval
+                        burstStartIdx = left;
+                        burstEndIdx = right;
+                    } else if (left <= burstEndIdx) {
+                        // OVERLAP DETECTED: New window overlaps with active burst -> merge and extend
+                        burstEndIdx = Math.max(burstEndIdx, right);
+                    } else {
+                        // GAP DETECTED: New window is separated from active burst -> commit previous
+                        emitBurstAnomaly(sortedTimestampedErrors, burstStartIdx, burstEndIdx, anomalies, counter);
+                        burstStartIdx = left;
+                        burstEndIdx = right;
+                    }
                 }
+            }
+
+            // Commit the final active burst if one exists
+            if (burstStartIdx != -1) {
+                emitBurstAnomaly(sortedTimestampedErrors, burstStartIdx, burstEndIdx, anomalies, counter);
             }
         } else {
             // Sequence-based burst fallback when timestamps are absent
@@ -200,6 +208,35 @@ public class AnomalyDetector {
                 ));
             }
         }
+    }
+
+    private void emitBurstAnomaly(List<LogEntry> errors, int startIdx, int endIdx,
+                                  List<Anomaly> anomalies, AtomicInteger counter) {
+        int totalCount = endIdx - startIdx + 1;
+        LocalDateTime startTs = errors.get(startIdx).getTimestamp();
+        LocalDateTime endTs = errors.get(endIdx).getTimestamp();
+
+        Duration elapsed = Duration.between(startTs, endTs);
+        long elapsedSeconds = elapsed.toSeconds();
+        if (elapsed.toNanosPart() > 0) {
+            elapsedSeconds++;
+        }
+        long actualDuration = Math.max(1, elapsedSeconds);
+        long displayWindow = Math.max(windowSeconds, actualDuration);
+
+        double score = Math.min(1.0, 0.5 + (totalCount / 20.0));
+
+        anomalies.add(new Anomaly(
+                "ANOM-" + counter.getAndIncrement(),
+                AnomalyType.ERROR_BURST,
+                String.format("Error burst: %d errors within %d seconds (threshold: %d)",
+                        totalCount, displayWindow, errorBurstThreshold),
+                startTs,
+                endTs,
+                totalCount,
+                errors.subList(startIdx, Math.min(startIdx + 5, endIdx + 1)),
+                score
+        ));
     }
 
     private void detectIdenticalErrors(List<LogEntry> entries, List<Anomaly> anomalies, AtomicInteger counter) {
