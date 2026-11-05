@@ -375,4 +375,71 @@ class AnomalyDetectorTest {
         assertEquals(baseTime, bursts.get(0).getStartTime());
         assertEquals(baseTime.plusSeconds(60), bursts.get(0).getEndTime());
     }
+
+    @Test
+    @DisplayName("Heterogeneous HTTP status codes sharing message phrasing must not trigger identical error anomaly")
+    void testHeterogeneousHttpStatusCodesDoNotTriggerIdenticalErrorAnomaly() {
+        LocalDateTime base = LocalDateTime.of(2026, 11, 6, 1, 0, 0);
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(base).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 400").build(),
+                LogEntry.builder().lineNumber(2).timestamp(base.plusSeconds(5)).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 401").build(),
+                LogEntry.builder().lineNumber(3).timestamp(base.plusSeconds(10)).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 403").build(),
+                LogEntry.builder().lineNumber(4).timestamp(base.plusSeconds(15)).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 500").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        boolean hasIdenticalErrorAnomaly = anomalies.stream()
+                .anyMatch(a -> a.getType() == AnomalyType.HIGH_FREQUENCY_IDENTICAL_ERRORS);
+        assertFalse(hasIdenticalErrorAnomaly,
+                "Different HTTP status codes (400, 401, 403, 500) must not be grouped into an identical error anomaly");
+    }
+
+    @Test
+    @DisplayName("Homogeneous error logs with identical HTTP status code must trigger identical error anomaly")
+    void testHomogeneousSameHttpStatusCodeStillTriggersIdenticalErrorAnomaly() {
+        LocalDateTime base = LocalDateTime.of(2026, 11, 6, 1, 0, 0);
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(base).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 503").build(),
+                LogEntry.builder().lineNumber(2).timestamp(base.plusSeconds(5)).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 503").build(),
+                LogEntry.builder().lineNumber(3).timestamp(base.plusSeconds(10)).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 503").build(),
+                LogEntry.builder().lineNumber(4).timestamp(base.plusSeconds(15)).level(LogLevel.ERROR)
+                        .message("Call to /api/checkout failed with HTTP status 503").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        List<Anomaly> identicalAnomalies = anomalies.stream()
+                .filter(a -> a.getType() == AnomalyType.HIGH_FREQUENCY_IDENTICAL_ERRORS)
+                .toList();
+
+        assertEquals(1, identicalAnomalies.size(),
+                "Four identical 503 errors must trigger exactly one HIGH_FREQUENCY_IDENTICAL_ERRORS anomaly");
+        assertEquals(4, identicalAnomalies.get(0).getAffectedLogCount());
+        assertTrue(identicalAnomalies.get(0).getDescription().contains("HTTP status 503"));
+    }
+
+    @Test
+    @DisplayName("Security logs with preserved HTTP status codes and scrubbed IPv4 addresses detect security anomalies properly")
+    void testSecurityLogsWithPreservedHttpStatusCodes() {
+        LocalDateTime base = LocalDateTime.of(2026, 11, 6, 1, 0, 0);
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(base).level(LogLevel.ERROR)
+                        .message("401 Unauthorized: Brute-force attack pattern detected from source IP 198.51.100.42").build(),
+                LogEntry.builder().lineNumber(2).timestamp(base.plusSeconds(1)).level(LogLevel.ERROR)
+                        .message("Access Denied: Unauthorized access attempt to /api/v1/internal/admin-keys").build(),
+                LogEntry.builder().lineNumber(3).timestamp(base.plusSeconds(2)).level(LogLevel.ERROR)
+                        .message("403 Forbidden: Invalid authentication token signature from IP 198.51.100.42").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        boolean hasSecurityAnomaly = anomalies.stream()
+                .anyMatch(a -> a.getType() == AnomalyType.SECURITY_SUSPICIOUS_ACCESS);
+        assertTrue(hasSecurityAnomaly, "Should detect SECURITY_SUSPICIOUS_ACCESS on security logs");
+    }
 }

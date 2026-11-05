@@ -74,4 +74,89 @@ class StatisticsAggregatorTest {
         assertEquals(2, stats.getTopErrors().get("Failed to fetch order ID {val}"));
         assertEquals(1, stats.getTopErrors().get("Connection pool exhausted"));
     }
+
+    @Test
+    @DisplayName("Should preserve contextual HTTP status codes specified in requirements")
+    void testPreserveTargetContextualHttpStatusCodes() {
+        assertEquals("HTTP 401 Unauthorized", aggregator.normalizeErrorMessage("HTTP 401 Unauthorized"));
+        assertEquals("HTTP 403 Forbidden", aggregator.normalizeErrorMessage("HTTP 403 Forbidden"));
+        assertEquals("HTTP status 500", aggregator.normalizeErrorMessage("HTTP status 500"));
+        assertEquals("status code: 503", aggregator.normalizeErrorMessage("status code: 503"));
+        assertEquals("HTTP/1.1 502 Bad Gateway", aggregator.normalizeErrorMessage("HTTP/1.1 502 Bad Gateway"));
+    }
+
+    @Test
+    @DisplayName("Should preserve HTTP status codes followed by reason phrases case-insensitively")
+    void testPreserveHttpStatusCodesWithSuffixReasonPhrasesCaseInsensitive() {
+        assertEquals("401 Unauthorized: Invalid API token",
+                aggregator.normalizeErrorMessage("401 Unauthorized: Invalid API token"));
+        assertEquals("403 FORBIDDEN: Access denied",
+                aggregator.normalizeErrorMessage("403 FORBIDDEN: Access denied"));
+        assertEquals("500 internal server error: Database failure",
+                aggregator.normalizeErrorMessage("500 internal server error: Database failure"));
+        assertEquals("404 Not Found: Resource missing",
+                aggregator.normalizeErrorMessage("404 Not Found: Resource missing"));
+    }
+
+    @Test
+    @DisplayName("Should normalize complete IPv4 address as a single {val} placeholder")
+    void testNormalizeIpv4AddressAsSinglePlaceholder() {
+        String input = "Failed authentication from IP 198.51.100.42 on interface";
+        assertEquals("Failed authentication from IP {val} on interface", aggregator.normalizeErrorMessage(input));
+    }
+
+    @Test
+    @DisplayName("Should validate IPv4 octets between 0 and 255 with boundary tests")
+    void testIpv4BoundaryAndInvalidAddresses() {
+        // Valid boundaries (0.0.0.0 and 255.255.255.255)
+        assertEquals("IP {val} connected", aggregator.normalizeErrorMessage("IP 0.0.0.0 connected"));
+        assertEquals("IP {val} broadcast", aggregator.normalizeErrorMessage("IP 255.255.255.255 broadcast"));
+
+        // Invalid octets (> 255) must NOT be treated as valid IPv4 addresses
+        assertEquals("IP {val}.{val}.{val}.{val} invalid", aggregator.normalizeErrorMessage("IP 256.1.1.1 invalid"));
+        assertEquals("IP {val}.{val}.{val}.{val} invalid", aggregator.normalizeErrorMessage("IP 999.999.999.999 invalid"));
+        assertEquals("IP {val}.{val}.{val}.{val} invalid", aggregator.normalizeErrorMessage("IP 10.0.0.300 invalid"));
+    }
+
+    @Test
+    @DisplayName("Should not protect arbitrary three-digit numbers without HTTP context")
+    void testDoNotProtectArbitraryThreeDigitNumbersWithoutHttpContext() {
+        assertEquals("user {val} error", aggregator.normalizeErrorMessage("user 401 error"));
+        assertEquals("order {val} failed", aggregator.normalizeErrorMessage("order 500 failed"));
+        assertEquals("port {val} closed", aggregator.normalizeErrorMessage("port 404 closed"));
+        assertEquals("batch {val} item", aggregator.normalizeErrorMessage("batch 101 item"));
+    }
+
+    @Test
+    @DisplayName("Should preserve HTTP status while normalizing dynamic order and user IDs in same message")
+    void testNormalizeMixedMessageWithHttpStatusAndDynamicIds() {
+        String input = "HTTP 500 Internal Server Error processing order 98765 for user 1234";
+        assertEquals("HTTP 500 Internal Server Error processing order {val} for user {val}",
+                aggregator.normalizeErrorMessage(input));
+    }
+
+    @Test
+    @DisplayName("Should normalize UUIDs and hexadecimal literals correctly")
+    void testNormalizeUuidsAndHexPointers() {
+        assertEquals("Transaction {val} failed",
+                aggregator.normalizeErrorMessage("Transaction 123e4567-e89b-12d3-a456-426614174000 failed"));
+        assertEquals("Memory address {val} fault",
+                aggregator.normalizeErrorMessage("Memory address 0x7fff fault"));
+    }
+
+    @Test
+    @DisplayName("Top recurring errors should maintain separate buckets for distinct HTTP status codes")
+    void testTopErrorsReflectsSeparateHttpStatusBuckets() {
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).level(LogLevel.ERROR).message("Call failed with HTTP status 401").build(),
+                LogEntry.builder().lineNumber(2).level(LogLevel.ERROR).message("Call failed with HTTP status 401").build(),
+                LogEntry.builder().lineNumber(3).level(LogLevel.ERROR).message("Call failed with HTTP status 500").build()
+        );
+
+        LogStatistics stats = aggregator.aggregate(entries);
+
+        assertEquals(2, stats.getTopErrors().size());
+        assertEquals(2, stats.getTopErrors().get("Call failed with HTTP status 401"));
+        assertEquals(1, stats.getTopErrors().get("Call failed with HTTP status 500"));
+    }
 }
