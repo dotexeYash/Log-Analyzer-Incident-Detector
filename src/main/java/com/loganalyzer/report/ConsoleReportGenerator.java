@@ -26,7 +26,9 @@ public class ConsoleReportGenerator implements ReportGenerator {
         }
 
         StringBuilder sb = new StringBuilder();
-        LogStatistics stats = result.getStatistics();
+        LogStatistics stats = result.getStatistics() != null
+                ? result.getStatistics()
+                : new LogStatistics(0, Map.of(), null, null, Map.of(), Map.of(), Map.of(), 0.0, 0.0);
 
         // Banner
         sb.append(SEPARATOR).append(System.lineSeparator());
@@ -39,7 +41,7 @@ public class ConsoleReportGenerator implements ReportGenerator {
         sb.append(String.format(" Total Records   : %,d%n", stats.getTotalLogs()));
         sb.append(String.format(" Error Rate      : %.2f%%%n", stats.getErrorPercentage()));
         sb.append(String.format(" Warning Rate    : %.2f%%%n", stats.getWarningPercentage()));
-        sb.append(String.format(" Overall Status  : %s%n", computeStatusBadge(result)));
+        sb.append(String.format(" Overall Status  : %s%n", computeStatusBadge(result, stats)));
         sb.append(SUB_SEPARATOR).append(System.lineSeparator());
 
         // Log Level Breakdown
@@ -119,14 +121,14 @@ public class ConsoleReportGenerator implements ReportGenerator {
         return sb.toString();
     }
 
-    private String computeStatusBadge(AnalysisResult result) {
+    private String computeStatusBadge(AnalysisResult result, LogStatistics stats) {
         if (result.hasCriticalIncidents()) {
             return "[CRITICAL ALERT] - Immediate Triage Required";
         }
         if (result.hasIncidents()) {
             return "[WARNING / DEGRADED] - Operational Attention Required";
         }
-        if (result.getStatistics().getErrorPercentage() > 5.0) {
+        if (stats != null && stats.getErrorPercentage() > 5.0) {
             return "[ELEVATED ERRORS] - Investigate Subsystem Logs";
         }
         return "[HEALTHY] - Operational Metrics Nominal";

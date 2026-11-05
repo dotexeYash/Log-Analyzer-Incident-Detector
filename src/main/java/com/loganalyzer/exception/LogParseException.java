@@ -4,6 +4,8 @@ package com.loganalyzer.exception;
  * Thrown when log line parsing encounters critical malformed content.
  */
 public class LogParseException extends LogAnalyzerException {
+    private static final long serialVersionUID = 1L;
+
     private final long lineNumber;
 
     public LogParseException(String message, long lineNumber) {

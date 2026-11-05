@@ -4,6 +4,8 @@ import com.loganalyzer.analyzer.AnomalyDetector;
 import com.loganalyzer.analyzer.IncidentDetector;
 import com.loganalyzer.analyzer.LogAnalyzer;
 import com.loganalyzer.analyzer.StatisticsAggregator;
+import com.loganalyzer.exception.InvalidLogFileException;
+import com.loganalyzer.exception.LogAnalyzerException;
 import com.loganalyzer.model.AnalysisResult;
 import com.loganalyzer.model.IncidentSeverity;
 import com.loganalyzer.parser.StandardLogParser;
@@ -76,29 +78,56 @@ public class Main {
         AnomalyDetector anomalyDetector = new AnomalyDetector(config.burstThreshold(), config.windowSeconds(), 4, 3, 2, 3);
         LogAnalyzer analyzer = new LogAnalyzer(new StandardLogParser(), new StatisticsAggregator(), anomalyDetector, new IncidentDetector());
 
+        AnalysisResult result;
         try {
-            AnalysisResult result = analyzer.analyze(path);
-            String report = renderReport(result, config.format());
-
-            if (config.outputPath() != null) {
-                Path out = Paths.get(config.outputPath());
-                if (out.getParent() != null) {
-                    Files.createDirectories(out.getParent());
-                }
-                Files.writeString(out, report);
-                System.out.println("Report successfully written to: " + out.toAbsolutePath());
-            } else {
-                System.out.println(report);
-            }
-
-            // Return non-zero exit code if critical incidents were detected
-            if (result.hasCriticalIncidents()) {
-                System.exit(2);
-            }
+            result = analyzer.analyze(path);
+        } catch (InvalidLogFileException e) {
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
+            return;
+        } catch (LogAnalyzerException e) {
+            System.err.println("Error analyzing log file: " + e.getMessage());
+            System.exit(1);
+            return;
         } catch (Exception e) {
-            System.err.println("Failed to analyze log file: " + e.getMessage());
+            System.err.println("Unexpected error during analysis: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
+            return;
+        }
+
+        String report;
+        try {
+            report = renderReport(result, config.format());
+        } catch (Exception e) {
+            System.err.println("Unexpected error rendering report: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+            return;
+        }
+
+        if (config.outputPath() != null) {
+            Path out = Paths.get(config.outputPath());
+            try {
+                writeReport(out, report);
+                System.out.println("Report successfully written to: " + out.toAbsolutePath());
+            } catch (IOException e) {
+                System.err.println("Error: Failed to write report to file " + out.toAbsolutePath() + " - " + e.getMessage());
+                System.exit(1);
+                return;
+            } catch (Exception e) {
+                System.err.println("Unexpected error writing report to file: " + e.getMessage());
+                e.printStackTrace();
+                System.exit(1);
+                return;
+            }
+        } else {
+            System.out.println(report);
+        }
+
+        // Return non-zero exit code if critical incidents were detected
+        if (result.hasCriticalIncidents()) {
+            System.exit(2);
         }
     }
 
@@ -209,9 +238,20 @@ public class Main {
             return parsed;
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(
-                    String.format("Invalid numeric value for %s: \"%s\". Expected a positive integer.", flag, value)
+                    String.format("Invalid numeric value for %s: \"%s\". Expected a positive integer.", flag, value),
+                    e
             );
         }
+    }
+
+    static void writeReport(Path out, String report) throws IOException {
+        if (out == null) {
+            throw new IllegalArgumentException("Output path cannot be null");
+        }
+        if (out.getParent() != null) {
+            Files.createDirectories(out.getParent());
+        }
+        Files.writeString(out, report);
     }
 
     private static String renderReport(AnalysisResult result, String format) {
@@ -240,23 +280,36 @@ public class Main {
 
         for (String sample : demoFiles) {
             Path path = Paths.get(sample);
-            if (!Files.exists(path)) {
+            boolean executed = false;
+
+            if (Files.exists(path)) {
+                try {
+                    AnalysisResult result = analyzer.analyze(path);
+                    System.out.println(reportGenerator.generate(result));
+                    System.out.println("\n");
+                    executed = true;
+                } catch (Exception e) {
+                    System.err.println("Warning: Failed to analyze local demo file " + sample + ": " + e.getMessage());
+                }
+            }
+
+            if (!executed) {
                 // Try classpath resource
                 try (InputStream is = Main.class.getClassLoader().getResourceAsStream(sample)) {
                     if (is != null) {
                         AnalysisResult result = analyzer.analyze(is, sample);
                         System.out.println(reportGenerator.generate(result));
                         System.out.println("\n");
-                        continue;
+                        executed = true;
                     }
-                } catch (IOException ignored) {}
+                } catch (IOException e) {
+                    System.err.println("Warning: I/O error reading classpath resource " + sample + ": " + e.getMessage());
+                } catch (Exception e) {
+                    System.err.println("Warning: Failed to analyze classpath resource " + sample + ": " + e.getMessage());
+                }
             }
 
-            if (Files.exists(path)) {
-                AnalysisResult result = analyzer.analyze(path);
-                System.out.println(reportGenerator.generate(result));
-                System.out.println("\n");
-            } else {
+            if (!executed) {
                 System.out.println("Notice: Demo file " + sample + " not found locally or on classpath.");
             }
         }
@@ -267,7 +320,7 @@ public class Main {
             Log Analyzer and Incident Detector (Java 21)
             Usage:
               java -jar target/log-analyzer-incident-detector-1.0.0.jar [options]
-              
+
             Options:
               -f,   --file <path>             Path to target log file to inspect
               -fmt, --format <console|md|json> Format of the generated report (default: console)
@@ -276,7 +329,7 @@ public class Main {
               -w,   --window <seconds>        Time window in seconds for burst detection (default: 60)
               --demo                          Execute demonstration against all bundled sample scenarios
               -h,   --help                    Display this help message
-              
+
             Exit Codes:
               0 - Analysis completed without critical issues
               1 - Error during execution or invalid inputs

@@ -1,6 +1,7 @@
 package com.loganalyzer.integration;
 
 import com.loganalyzer.analyzer.LogAnalyzer;
+import com.loganalyzer.exception.InvalidLogFileException;
 import com.loganalyzer.model.AnalysisResult;
 import com.loganalyzer.model.IncidentCategory;
 import com.loganalyzer.model.IncidentSeverity;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -75,5 +77,24 @@ class LogAnalyzerEndToEndTest {
         boolean hasOomIncident = result.getIncidents().stream()
                 .anyMatch(i -> i.getCategory() == IncidentCategory.MEMORY_CRITICAL_FAILURE && i.getSeverity() == IncidentSeverity.CRITICAL);
         assertTrue(hasOomIncident, "Should identify CRITICAL MEMORY_CRITICAL_FAILURE incident");
+    }
+
+    @Test
+    @DisplayName("Task 6: Should throw IllegalArgumentException when log file path is null")
+    void testAnalyzeNullPathThrowsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> analyzer.analyze((Path) null));
+    }
+
+    @Test
+    @DisplayName("Task 6: Should throw IllegalArgumentException when InputStream is null")
+    void testAnalyzeNullInputStreamThrowsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> analyzer.analyze((InputStream) null, "source"));
+    }
+
+    @Test
+    @DisplayName("Task 6: Should throw InvalidLogFileException when analyzing non-existent file")
+    void testAnalyzeNonExistentFileThrowsInvalidLogFileException() {
+        Path invalidPath = Paths.get("non-existent-directory/non-existent-file.log");
+        assertThrows(InvalidLogFileException.class, () -> analyzer.analyze(invalidPath));
     }
 }

@@ -24,7 +24,9 @@ public class MarkdownReportGenerator implements ReportGenerator {
         }
 
         StringBuilder sb = new StringBuilder();
-        LogStatistics stats = result.getStatistics();
+        LogStatistics stats = result.getStatistics() != null
+                ? result.getStatistics()
+                : new LogStatistics(0, Map.of(), null, null, Map.of(), Map.of(), Map.of(), 0.0, 0.0);
 
         sb.append("# 📋 Log Analysis & Incident Detection Report\n\n");
 

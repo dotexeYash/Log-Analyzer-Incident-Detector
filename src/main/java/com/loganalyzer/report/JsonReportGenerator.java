@@ -23,7 +23,9 @@ public class JsonReportGenerator implements ReportGenerator {
         }
 
         StringBuilder sb = new StringBuilder();
-        LogStatistics stats = result.getStatistics();
+        LogStatistics stats = result.getStatistics() != null
+                ? result.getStatistics()
+                : new LogStatistics(0, Map.of(), null, null, Map.of(), Map.of(), Map.of(), 0.0, 0.0);
 
         sb.append("{\n");
         sb.append(indent(1)).append("\"sourceName\": \"").append(escape(result.getSourceName())).append("\",\n");

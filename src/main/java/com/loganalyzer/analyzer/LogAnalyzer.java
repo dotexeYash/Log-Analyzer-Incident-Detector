@@ -46,11 +46,12 @@ public class LogAnalyzer {
      *
      * @param logFilePath path to log file
      * @return complete AnalysisResult
+     * @throws IllegalArgumentException if logFilePath is null
      * @throws InvalidLogFileException if file is invalid or not readable
      */
     public AnalysisResult analyze(Path logFilePath) {
         if (logFilePath == null) {
-            throw new InvalidLogFileException("Log file path cannot be null");
+            throw new IllegalArgumentException("Log file path cannot be null");
         }
 
         try {

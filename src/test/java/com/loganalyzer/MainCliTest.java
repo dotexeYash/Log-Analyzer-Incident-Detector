@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class MainCliTest {
@@ -98,6 +102,16 @@ class MainCliTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> Main.parseArguments(args));
         assertTrue(ex.getMessage().contains("Invalid numeric value for -b: \"abc\""));
         assertTrue(ex.getMessage().contains("Expected a positive integer"));
+        assertInstanceOf(NumberFormatException.class, ex.getCause(), "Must preserve NumberFormatException as cause");
+    }
+
+    @Test
+    @DisplayName("Task 6: Non-numeric integer option should preserve NumberFormatException as cause")
+    void testNonNumericOptionPreservesNumberFormatExceptionCause() {
+        String[] args = {"-f", "test.log", "-w", "not-a-number"};
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> Main.parseArguments(args));
+        assertNotNull(ex.getCause(), "IllegalArgumentException must preserve underlying cause");
+        assertInstanceOf(NumberFormatException.class, ex.getCause(), "Underlying cause must be NumberFormatException");
     }
 
     @Test
@@ -213,5 +227,18 @@ class MainCliTest {
         String[] args = {"--invalid-option"};
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> Main.parseArguments(args));
         assertTrue(ex.getMessage().contains("Unknown option: --invalid-option"));
+    }
+
+    @Test
+    @DisplayName("Task 6: writeReport should throw IOException when target path is an existing directory")
+    void testWriteReportToDirectoryThrowsIOException() {
+        Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"));
+        assertThrows(IOException.class, () -> Main.writeReport(tempDir, "Sample Report Content"));
+    }
+
+    @Test
+    @DisplayName("Task 6: writeReport should throw IllegalArgumentException when path is null")
+    void testWriteReportNullPathThrowsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> Main.writeReport(null, "Sample Report Content"));
     }
 }

@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,33 +28,34 @@ import java.util.regex.Pattern;
 public class StandardLogParser implements LogParser {
 
     private static final DateTimeFormatter FLEXIBLE_FORMATTER = new DateTimeFormatterBuilder()
-            .appendPattern("[yyyy-MM-dd][yyyy/MM/dd]")
+            .appendPattern("[uuuu-M-d][uuuu/M/d]")
             .appendPattern("['T'][' ']")
             .appendPattern("HH:mm:ss")
             .optionalStart()
             .appendFraction(ChronoField.NANO_OF_SECOND, 1, 9, true)
             .optionalEnd()
             .optionalStart()
-            .appendPattern("[X][XXX][Z]")
+            .appendPattern("[XXX][XX][X][Z]")
             .optionalEnd()
             .parseDefaulting(ChronoField.NANO_OF_SECOND, 0)
-            .toFormatter();
+            .toFormatter()
+            .withResolverStyle(ResolverStyle.STRICT);
 
     // Pattern 1: 2026-11-03 01:14:02.123 [thread-1] INFO com.service.UserService - Message
     private static final Pattern PATTERN_STANDARD = Pattern.compile(
-            "^(\\d{4}[-/]\\d{2}[-/]\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{1,9})?(?:Z|[+-]\\d{2}:?\\d{2})?)" +
+            "^(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{1,9})?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)" +
             "\\s+(?:\\[([^\\]]+)\\]\\s+)?([A-Za-z]{3,8})\\s+(?:(?:(?:\\[([^\\]]+)\\])|([a-zA-Z0-9_.$#\\-]+))\\s*[-:]\\s+)(.*)$"
     );
 
     // Pattern 2: [2026-11-03 01:14:02.123] [INFO] [thread-1] [com.service.UserService] Message
     private static final Pattern PATTERN_BRACKETED = Pattern.compile(
-            "^\\[(\\d{4}[-/]\\d{2}[-/]\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{1,9})?(?:Z|[+-]\\d{2}:?\\d{2})?)\\]" +
+            "^\\[(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{1,9})?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)\\]" +
             "\\s+\\[([A-Za-z]{3,8})\\](?:\s+\\[([^\\]]+)\\])?(?:\s+\\[([^\\]]+)\\])?\\s*[-:]?\\s*(.*)$"
     );
 
     // Pattern 3: 2026-11-03 01:14:02 INFO Message
     private static final Pattern PATTERN_SIMPLE = Pattern.compile(
-            "^(\\d{4}[-/]\\d{2}[-/]\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{1,9})?(?:Z|[+-]\\d{2}:?\\d{2})?)" +
+            "^(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{1,9})?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)" +
             "\\s+([A-Za-z]{3,8})\\s*[-:]?\\s*(.*)$"
     );
 
@@ -64,7 +67,7 @@ public class StandardLogParser implements LogParser {
     @Override
     public List<LogEntry> parse(Path path) throws IOException, InvalidLogFileException {
         if (path == null) {
-            throw new InvalidLogFileException("Log file path cannot be null");
+            throw new IllegalArgumentException("Log file path cannot be null");
         }
         if (!Files.exists(path)) {
             throw new InvalidLogFileException("Log file does not exist: " + path.toAbsolutePath());
@@ -207,7 +210,7 @@ public class StandardLogParser implements LogParser {
             // Normalize commas used in milliseconds (e.g. 2026-11-03 01:14:02,123)
             String normalized = raw.replace(',', '.');
             return LocalDateTime.parse(normalized, FLEXIBLE_FORMATTER);
-        } catch (Exception e) {
+        } catch (DateTimeParseException e) {
             return null;
         }
     }

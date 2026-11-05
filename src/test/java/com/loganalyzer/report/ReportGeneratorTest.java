@@ -104,4 +104,43 @@ class ReportGeneratorTest {
         assertTrue(json.contains("\"totalLogs\": 100"));
         assertTrue(json.contains("\"id\": \"INC-001\""));
     }
+
+    @Test
+    @DisplayName("Task 6: ConsoleReportGenerator safely handles AnalysisResult with null statistics")
+    void testConsoleReportWithNullStatistics() {
+        AnalysisResult nullStatsResult = new AnalysisResult("null-stats.log", List.of(), null, List.of(), List.of());
+        ConsoleReportGenerator generator = new ConsoleReportGenerator();
+        assertDoesNotThrow(() -> {
+            String report = generator.generate(nullStatsResult);
+            assertNotNull(report);
+            assertTrue(report.contains("Total Records   : 0"));
+            assertTrue(report.contains("Time Range      : N/A to N/A"));
+        });
+    }
+
+    @Test
+    @DisplayName("Task 6: MarkdownReportGenerator safely handles AnalysisResult with null statistics")
+    void testMarkdownReportWithNullStatistics() {
+        AnalysisResult nullStatsResult = new AnalysisResult("null-stats.log", List.of(), null, List.of(), List.of());
+        MarkdownReportGenerator generator = new MarkdownReportGenerator();
+        assertDoesNotThrow(() -> {
+            String report = generator.generate(nullStatsResult);
+            assertNotNull(report);
+            assertTrue(report.contains("| **Total Log Entries** | 0 |"));
+            assertTrue(report.contains("| **Time Range** | N/A to N/A |"));
+        });
+    }
+
+    @Test
+    @DisplayName("Task 6: JsonReportGenerator safely handles AnalysisResult with null statistics")
+    void testJsonReportWithNullStatistics() {
+        AnalysisResult nullStatsResult = new AnalysisResult("null-stats.log", List.of(), null, List.of(), List.of());
+        JsonReportGenerator generator = new JsonReportGenerator();
+        assertDoesNotThrow(() -> {
+            String json = generator.generate(nullStatsResult);
+            assertNotNull(json);
+            assertTrue(json.contains("\"totalLogs\": 0"));
+            assertTrue(json.contains("\"firstTimestamp\": null"));
+        });
+    }
 }
