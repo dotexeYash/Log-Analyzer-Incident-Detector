@@ -128,6 +128,17 @@ Log-Analyzer-Incident-Detector/
 ├── pom.xml
 ├── README.md
 │
+├── docs/
+│   └── development-reports/
+│       └── Phase-1/
+│           ├── Task-1/
+│           ├── Task-2/
+│           ├── Task-3/
+│           ├── Task-4/
+│           ├── Task-5/
+│           ├── Task-6/
+│           └── Milestone-Review/
+│
 ├── sample-logs/
 │   ├── normal-operations.log
 │   ├── critical-incident-database.log
@@ -154,6 +165,22 @@ Log-Analyzer-Incident-Detector/
             ├── parser/
             └── report/
 ```
+
+---
+
+## 📚 Documentation
+
+Phase 1 development reports, technical investigations, and architectural reviews are available inside [`docs/development-reports/Phase-1/`](docs/development-reports/Phase-1/):
+
+* [**Task 1**](docs/development-reports/Phase-1/Task-1/) — Fix false-positive security anomaly filtering and test suite additions.
+* [**Task 2**](docs/development-reports/Phase-1/Task-2/) — Error burst sliding window detection, sub-second precision boundary fix, and timestamp sorting integrity.
+* [**Task 3**](docs/development-reports/Phase-1/Task-3/) — Decoupled CLI argument parser, strict option validation, and reference implementation.
+* [**Task 4**](docs/development-reports/Phase-1/Task-4/) — Context-aware digit normalization, regex refinement, and regression testing.
+* [**Task 5**](docs/development-reports/Phase-1/Task-5/) — Multi-format timestamp parsing, timezone offset handling, and strict calendar-date validation (`ResolverStyle.STRICT`).
+* [**Task 6**](docs/development-reports/Phase-1/Task-6/) — Project-wide exception handling audit, custom exception serialization, and defensive null handling.
+* [**Milestone-Review**](docs/development-reports/Phase-1/Milestone-Review/) — Consolidated Phase 1 code review, complete source diffs (Markdown & text), and documentation structure records.
+
+Each task folder contains its corresponding investigation, design, implementation, and test verification reports. The `Milestone-Review` folder contains combined code reviews and milestone artifacts across tasks.
 
 ---
 
