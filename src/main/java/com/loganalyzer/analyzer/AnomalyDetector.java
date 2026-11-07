@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
  */
 public class AnomalyDetector {
 
+    private final StatisticsAggregator statisticsAggregator;
     private final int errorBurstThreshold;
     private final int windowSeconds;
     private final int identicalErrorThreshold;
@@ -45,22 +46,69 @@ public class AnomalyDetector {
             "(?i)(sockettimeoutexception|read timed? out|connect(?:ion)? timed? out|gateway timeout|504 gateway|connection refused)"
     );
 
-    public AnomalyDetector() {
-        this(5, 60, 4, 3, 2, 3);
-    }
-
-    public AnomalyDetector(int errorBurstThreshold,
+    /**
+     * Primary constructor with explicit dependency injection and custom thresholds.
+     *
+     * @param statisticsAggregator the StatisticsAggregator instance for log processing and normalization
+     * @param errorBurstThreshold threshold for error burst count
+     * @param windowSeconds time window in seconds for error burst detection
+     * @param identicalErrorThreshold threshold for repetitive identical error count
+     * @param securityThreshold threshold for security incident occurrences
+     * @param databaseFailureThreshold threshold for database failures
+     * @param timeoutThreshold threshold for timeouts
+     */
+    public AnomalyDetector(StatisticsAggregator statisticsAggregator,
+                           int errorBurstThreshold,
                            int windowSeconds,
                            int identicalErrorThreshold,
                            int securityThreshold,
                            int databaseFailureThreshold,
                            int timeoutThreshold) {
+        this.statisticsAggregator = statisticsAggregator != null ? statisticsAggregator : new StatisticsAggregator();
         this.errorBurstThreshold = errorBurstThreshold;
         this.windowSeconds = windowSeconds;
         this.identicalErrorThreshold = identicalErrorThreshold;
         this.securityThreshold = securityThreshold;
         this.databaseFailureThreshold = databaseFailureThreshold;
         this.timeoutThreshold = timeoutThreshold;
+    }
+
+    /**
+     * Overloaded constructor with dependency injection and default thresholds.
+     *
+     * @param statisticsAggregator the StatisticsAggregator instance to inject
+     */
+    public AnomalyDetector(StatisticsAggregator statisticsAggregator) {
+        this(statisticsAggregator, 5, 60, 4, 3, 2, 3);
+    }
+
+    /**
+     * Overloaded constructor for threshold customization with default StatisticsAggregator.
+     * Preserves 100% backward compatibility with existing callers.
+     */
+    public AnomalyDetector(int errorBurstThreshold,
+                           int windowSeconds,
+                           int identicalErrorThreshold,
+                           int securityThreshold,
+                           int databaseFailureThreshold,
+                           int timeoutThreshold) {
+        this(new StatisticsAggregator(), errorBurstThreshold, windowSeconds, identicalErrorThreshold, securityThreshold, databaseFailureThreshold, timeoutThreshold);
+    }
+
+    /**
+     * Default zero-argument constructor using default thresholds and default StatisticsAggregator.
+     */
+    public AnomalyDetector() {
+        this(new StatisticsAggregator(), 5, 60, 4, 3, 2, 3);
+    }
+
+    /**
+     * Returns the injected StatisticsAggregator instance.
+     *
+     * @return the StatisticsAggregator dependency
+     */
+    public StatisticsAggregator getStatisticsAggregator() {
+        return statisticsAggregator;
     }
 
     /**
@@ -240,12 +288,11 @@ public class AnomalyDetector {
     }
 
     private void detectIdenticalErrors(List<LogEntry> entries, List<Anomaly> anomalies, AtomicInteger counter) {
-        StatisticsAggregator aggregator = new StatisticsAggregator();
         Map<String, List<LogEntry>> errorGroups = new LinkedHashMap<>();
 
         for (LogEntry entry : entries) {
             if (entry.getLevel().isError()) {
-                String normalized = aggregator.normalizeErrorMessage(entry.getMessage());
+                String normalized = this.statisticsAggregator.normalizeErrorMessage(entry.getMessage());
                 errorGroups.computeIfAbsent(normalized, k -> new ArrayList<>()).add(entry);
             }
         }

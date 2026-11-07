@@ -442,4 +442,89 @@ class AnomalyDetectorTest {
                 .anyMatch(a -> a.getType() == AnomalyType.SECURITY_SUSPICIOUS_ACCESS);
         assertTrue(hasSecurityAnomaly, "Should detect SECURITY_SUSPICIOUS_ACCESS on security logs");
     }
+
+    @Test
+    @DisplayName("Should use explicitly injected StatisticsAggregator instance")
+    void testExplicitDependencyInjection() {
+        StatisticsAggregator customAggregator = new StatisticsAggregator();
+        AnomalyDetector customDetector = new AnomalyDetector(customAggregator, 5, 60, 4, 3, 2, 3);
+
+        assertSame(customAggregator, customDetector.getStatisticsAggregator(),
+                "AnomalyDetector should hold the exact injected StatisticsAggregator instance");
+    }
+
+    @Test
+    @DisplayName("Should safely fall back to new StatisticsAggregator when null is injected")
+    void testNullDependencyFallback() {
+        AnomalyDetector nullDetector = new AnomalyDetector((StatisticsAggregator) null, 5, 60, 4, 3, 2, 3);
+
+        assertNotNull(nullDetector.getStatisticsAggregator(),
+                "Null dependency should safely fall back to a default non-null StatisticsAggregator");
+
+        // Verify anomaly detection executes properly without NullPointerException
+        LocalDateTime base = LocalDateTime.of(2026, 11, 6, 1, 0, 0);
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(base).level(LogLevel.ERROR).message("Database connection failed").build(),
+                LogEntry.builder().lineNumber(2).timestamp(base.plusSeconds(1)).level(LogLevel.ERROR).message("Database connection failed").build(),
+                LogEntry.builder().lineNumber(3).timestamp(base.plusSeconds(2)).level(LogLevel.ERROR).message("Database connection failed").build(),
+                LogEntry.builder().lineNumber(4).timestamp(base.plusSeconds(3)).level(LogLevel.ERROR).message("Database connection failed").build()
+        );
+
+        assertDoesNotThrow(() -> nullDetector.detectAnomalies(entries));
+    }
+
+    @Test
+    @DisplayName("Should safely fall back to default StatisticsAggregator when null is passed to 1-arg constructor")
+    void testNullDependencyFallbackOneArgConstructor() {
+        AnomalyDetector nullDetector = new AnomalyDetector(null);
+
+        assertNotNull(nullDetector.getStatisticsAggregator(),
+                "Null dependency in 1-arg constructor should fall back to a default non-null StatisticsAggregator");
+    }
+
+    @Test
+    @DisplayName("Should properly initialize with all constructor overloads")
+    void testConstructorOverloads() {
+        // 1. Default zero-argument constructor
+        AnomalyDetector defaultDetector = new AnomalyDetector();
+        assertNotNull(defaultDetector.getStatisticsAggregator(), "Default constructor should initialize aggregator");
+
+        // 2. 1-arg constructor with dependency injection
+        StatisticsAggregator customAggregator = new StatisticsAggregator();
+        AnomalyDetector oneArgDetector = new AnomalyDetector(customAggregator);
+        assertSame(customAggregator, oneArgDetector.getStatisticsAggregator(), "1-arg constructor should inject aggregator");
+
+        // 3. 6-arg constructor (backward compatibility)
+        AnomalyDetector sixArgDetector = new AnomalyDetector(10, 120, 5, 4, 3, 4);
+        assertNotNull(sixArgDetector.getStatisticsAggregator(), "6-arg constructor should initialize default aggregator");
+
+        // 4. 7-arg constructor (primary DI constructor)
+        AnomalyDetector primaryDetector = new AnomalyDetector(customAggregator, 10, 120, 5, 4, 3, 4);
+        assertSame(customAggregator, primaryDetector.getStatisticsAggregator(), "7-arg constructor should retain injected aggregator");
+    }
+
+    @Test
+    @DisplayName("Injected StatisticsAggregator should normalize messages during identical error detection")
+    void testInjectedAggregatorNormalizesInIdenticalErrorDetection() {
+        StatisticsAggregator aggregator = new StatisticsAggregator();
+        AnomalyDetector detectorWithDI = new AnomalyDetector(aggregator, 10, 120, 4, 3, 2, 3);
+
+        LocalDateTime base = LocalDateTime.of(2026, 11, 7, 10, 0, 0);
+        // Differing order IDs normalize to "Failed to fetch order ID {val}" via StatisticsAggregator
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(base).level(LogLevel.ERROR)
+                        .message("Failed to fetch order ID 1001").build(),
+                LogEntry.builder().lineNumber(2).timestamp(base.plusSeconds(1)).level(LogLevel.ERROR)
+                        .message("Failed to fetch order ID 1002").build(),
+                LogEntry.builder().lineNumber(3).timestamp(base.plusSeconds(2)).level(LogLevel.ERROR)
+                        .message("Failed to fetch order ID 1003").build(),
+                LogEntry.builder().lineNumber(4).timestamp(base.plusSeconds(3)).level(LogLevel.ERROR)
+                        .message("Failed to fetch order ID 1004").build()
+        );
+
+        List<Anomaly> anomalies = detectorWithDI.detectAnomalies(entries);
+        boolean hasIdenticalError = anomalies.stream()
+                .anyMatch(a -> a.getType() == AnomalyType.HIGH_FREQUENCY_IDENTICAL_ERRORS);
+        assertTrue(hasIdenticalError, "Should detect identical errors using injected aggregator normalization");
+    }
 }

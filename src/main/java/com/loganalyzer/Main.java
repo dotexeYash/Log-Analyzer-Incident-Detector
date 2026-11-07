@@ -75,8 +75,9 @@ public class Main {
             return;
         }
 
-        AnomalyDetector anomalyDetector = new AnomalyDetector(config.burstThreshold(), config.windowSeconds(), 4, 3, 2, 3);
-        LogAnalyzer analyzer = new LogAnalyzer(new StandardLogParser(), new StatisticsAggregator(), anomalyDetector, new IncidentDetector());
+        StatisticsAggregator statisticsAggregator = new StatisticsAggregator();
+        AnomalyDetector anomalyDetector = new AnomalyDetector(statisticsAggregator, config.burstThreshold(), config.windowSeconds(), 4, 3, 2, 3);
+        LogAnalyzer analyzer = new LogAnalyzer(new StandardLogParser(), statisticsAggregator, anomalyDetector, new IncidentDetector());
 
         AnalysisResult result;
         try {
