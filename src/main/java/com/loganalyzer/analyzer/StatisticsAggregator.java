@@ -3,6 +3,7 @@ package com.loganalyzer.analyzer;
 import com.loganalyzer.model.LogEntry;
 import com.loganalyzer.model.LogLevel;
 import com.loganalyzer.model.LogStatistics;
+import com.loganalyzer.util.FrequencyDistribution;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -56,8 +57,8 @@ public class StatisticsAggregator {
 
         LocalDateTime firstTimestamp = null;
         LocalDateTime lastTimestamp = null;
-        Map<String, Long> errorFrequency = new LinkedHashMap<>();
-        Map<String, Long> loggerFrequency = new LinkedHashMap<>();
+        FrequencyDistribution<String> errorDistribution = new FrequencyDistribution<>();
+        FrequencyDistribution<String> loggerDistribution = new FrequencyDistribution<>();
         Map<String, Long> hourlyCounts = new LinkedHashMap<>();
 
         for (LogEntry entry : entries) {
@@ -81,13 +82,13 @@ public class StatisticsAggregator {
             // Top loggers
             String logger = entry.getLogger();
             if (logger != null && !logger.isBlank()) {
-                loggerFrequency.put(logger, loggerFrequency.getOrDefault(logger, 0L) + 1);
+                loggerDistribution.add(logger);
             }
 
             // Error normalization
             if (entry.getLevel().isError()) {
                 String normalized = normalizeErrorMessage(entry.getMessage());
-                errorFrequency.put(normalized, errorFrequency.getOrDefault(normalized, 0L) + 1);
+                errorDistribution.add(normalized);
             }
         }
 
@@ -98,26 +99,10 @@ public class StatisticsAggregator {
         double warningPercentage = totalLogs > 0 ? (warnCount * 100.0) / totalLogs : 0.0;
 
         // Top 10 errors
-        Map<String, Long> topErrors = errorFrequency.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .limit(10)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
+        Map<String, Long> topErrors = errorDistribution.getTop(10);
 
         // Top 10 loggers
-        Map<String, Long> topLoggers = loggerFrequency.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .limit(10)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
+        Map<String, Long> topLoggers = loggerDistribution.getTop(10);
 
         return new LogStatistics(
                 totalLogs,
