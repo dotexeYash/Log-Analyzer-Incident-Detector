@@ -7,15 +7,13 @@ import com.loganalyzer.model.IncidentSeverity;
 import com.loganalyzer.model.LogLevel;
 import com.loganalyzer.model.LogStatistics;
 
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
  * Renders high-visibility ASCII operational dashboards and summary reports to the console.
  */
-public class ConsoleReportGenerator implements ReportGenerator {
+public class ConsoleReportGenerator extends AbstractReportGenerator {
 
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String SEPARATOR = "=".repeat(80);
     private static final String SUB_SEPARATOR = "-".repeat(80);
 
@@ -26,9 +24,7 @@ public class ConsoleReportGenerator implements ReportGenerator {
         }
 
         StringBuilder sb = new StringBuilder();
-        LogStatistics stats = result.getStatistics() != null
-                ? result.getStatistics()
-                : new LogStatistics(0, Map.of(), null, null, Map.of(), Map.of(), Map.of(), 0.0, 0.0);
+        LogStatistics stats = resolveStatistics(result);
 
         // Banner
         sb.append(SEPARATOR).append(System.lineSeparator());
@@ -36,8 +32,8 @@ public class ConsoleReportGenerator implements ReportGenerator {
         sb.append(SEPARATOR).append(System.lineSeparator());
         sb.append(String.format(" Source Log File : %s%n", result.getSourceName()));
         sb.append(String.format(" Time Range      : %s to %s%n",
-                stats.getFirstTimestamp() != null ? stats.getFirstTimestamp().format(TIME_FORMAT) : "N/A",
-                stats.getLastTimestamp() != null ? stats.getLastTimestamp().format(TIME_FORMAT) : "N/A"));
+                formatTimestamp(stats.getFirstTimestamp()),
+                formatTimestamp(stats.getLastTimestamp())));
         sb.append(String.format(" Total Records   : %,d%n", stats.getTotalLogs()));
         sb.append(String.format(" Error Rate      : %.2f%%%n", stats.getErrorPercentage()));
         sb.append(String.format(" Warning Rate    : %.2f%%%n", stats.getWarningPercentage()));
@@ -81,8 +77,8 @@ public class ConsoleReportGenerator implements ReportGenerator {
                 sb.append(String.format("    Details: %s%n", anomaly.getDescription()));
                 if (anomaly.getStartTime() != null) {
                     sb.append(String.format("    Window : %s to %s%n",
-                            anomaly.getStartTime().format(TIME_FORMAT),
-                            anomaly.getEndTime() != null ? anomaly.getEndTime().format(TIME_FORMAT) : "N/A"));
+                            formatTimestamp(anomaly.getStartTime()),
+                            formatTimestamp(anomaly.getEndTime())));
                 }
             }
         }
@@ -97,7 +93,7 @@ public class ConsoleReportGenerator implements ReportGenerator {
                 sb.append(String.format("  Incident ID : %s [%s]%n", incident.getId(), incident.getSeverity().getLabel()));
                 sb.append(String.format("  Title       : %s%n", incident.getTitle()));
                 sb.append(String.format("  Category    : %s%n", incident.getCategory().getDescription()));
-                sb.append(String.format("  Detected At : %s%n", incident.getDetectedAt().format(TIME_FORMAT)));
+                sb.append(String.format("  Detected At : %s%n", formatTimestamp(incident.getDetectedAt())));
                 sb.append(String.format("  Summary     : %s%n", incident.getSummary()));
 
                 if (!incident.getRootCauseEntries().isEmpty()) {

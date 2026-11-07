@@ -7,15 +7,12 @@ import com.loganalyzer.model.IncidentSeverity;
 import com.loganalyzer.model.LogLevel;
 import com.loganalyzer.model.LogStatistics;
 
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
  * Generates structured GitHub-flavored Markdown reports for documentation, ticket attachments, or CI/CD pipelines.
  */
-public class MarkdownReportGenerator implements ReportGenerator {
-
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+public class MarkdownReportGenerator extends AbstractReportGenerator {
 
     @Override
     public String generate(AnalysisResult result) {
@@ -24,9 +21,7 @@ public class MarkdownReportGenerator implements ReportGenerator {
         }
 
         StringBuilder sb = new StringBuilder();
-        LogStatistics stats = result.getStatistics() != null
-                ? result.getStatistics()
-                : new LogStatistics(0, Map.of(), null, null, Map.of(), Map.of(), Map.of(), 0.0, 0.0);
+        LogStatistics stats = resolveStatistics(result);
 
         sb.append("# 📋 Log Analysis & Incident Detection Report\n\n");
 
@@ -45,8 +40,8 @@ public class MarkdownReportGenerator implements ReportGenerator {
         sb.append("| :--- | :--- |\n");
         sb.append(String.format("| **Source Log File** | `%s` |\n", result.getSourceName()));
         sb.append(String.format("| **Time Range** | %s to %s |\n",
-                stats.getFirstTimestamp() != null ? stats.getFirstTimestamp().format(TIME_FORMAT) : "N/A",
-                stats.getLastTimestamp() != null ? stats.getLastTimestamp().format(TIME_FORMAT) : "N/A"));
+                formatTimestamp(stats.getFirstTimestamp()),
+                formatTimestamp(stats.getLastTimestamp())));
         sb.append(String.format("| **Total Log Entries** | %,d |\n", stats.getTotalLogs()));
         sb.append(String.format("| **Error Rate** | **%.2f%%** |\n", stats.getErrorPercentage()));
         sb.append(String.format("| **Warning Rate** | %.2f%% |\n", stats.getWarningPercentage()));
@@ -92,8 +87,8 @@ public class MarkdownReportGenerator implements ReportGenerator {
                 sb.append(String.format("- **Affected Entries**: %,d\n", a.getAffectedLogCount()));
                 if (a.getStartTime() != null) {
                     sb.append(String.format("- **Observed Window**: %s to %s\n",
-                            a.getStartTime().format(TIME_FORMAT),
-                            a.getEndTime() != null ? a.getEndTime().format(TIME_FORMAT) : "N/A"));
+                            formatTimestamp(a.getStartTime()),
+                            formatTimestamp(a.getEndTime())));
                 }
                 sb.append("\n");
             }
@@ -110,7 +105,7 @@ public class MarkdownReportGenerator implements ReportGenerator {
 
                 sb.append(String.format("### [%s] `%s`: %s\n\n", badge, inc.getId(), inc.getTitle()));
                 sb.append(String.format("- **Category**: `%s`\n", inc.getCategory().getDescription()));
-                sb.append(String.format("- **Detected At**: %s\n", inc.getDetectedAt().format(TIME_FORMAT)));
+                sb.append(String.format("- **Detected At**: %s\n", formatTimestamp(inc.getDetectedAt())));
                 sb.append(String.format("- **Summary**: %s\n\n", inc.getSummary()));
 
                 if (!inc.getRootCauseEntries().isEmpty()) {

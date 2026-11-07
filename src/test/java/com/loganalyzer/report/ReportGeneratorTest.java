@@ -143,4 +143,87 @@ class ReportGeneratorTest {
             assertTrue(json.contains("\"firstTimestamp\": null"));
         });
     }
+
+    @Test
+    @DisplayName("Phase 2: All report generators extend AbstractReportGenerator")
+    void testInheritanceHierarchy() {
+        ReportGenerator console = new ConsoleReportGenerator();
+        ReportGenerator markdown = new MarkdownReportGenerator();
+        ReportGenerator json = new JsonReportGenerator();
+
+        assertInstanceOf(AbstractReportGenerator.class, console);
+        assertInstanceOf(AbstractReportGenerator.class, markdown);
+        assertInstanceOf(AbstractReportGenerator.class, json);
+    }
+
+    @Test
+    @DisplayName("Phase 2: AbstractReportGenerator resolves statistics safely")
+    void testAbstractReportGeneratorResolveStatistics() {
+        TestReportGenerator generator = new TestReportGenerator();
+
+        // Non-null result with stats
+        LogStatistics resolved = generator.resolveStatistics(sampleResult);
+        assertNotNull(resolved);
+        assertEquals(100, resolved.getTotalLogs());
+
+        // Non-null result with null stats
+        AnalysisResult nullStatsResult = new AnalysisResult("test.log", List.of(), null, List.of(), List.of());
+        LogStatistics fallback1 = generator.resolveStatistics(nullStatsResult);
+        assertNotNull(fallback1);
+        assertEquals(0, fallback1.getTotalLogs());
+
+        // Null result
+        LogStatistics fallback2 = generator.resolveStatistics(null);
+        assertNotNull(fallback2);
+        assertEquals(0, fallback2.getTotalLogs());
+    }
+
+    @Test
+    @DisplayName("Phase 2: AbstractReportGenerator formats timestamps consistently")
+    void testAbstractReportGeneratorFormatTimestamp() {
+        TestReportGenerator generator = new TestReportGenerator();
+
+        LocalDateTime ts = LocalDateTime.of(2026, 11, 7, 14, 30, 45);
+        assertEquals("2026-11-07 14:30:45", generator.formatTimestamp(ts));
+        assertEquals("N/A", generator.formatTimestamp(null));
+        assertEquals("UNKNOWN", generator.formatTimestamp(null, "UNKNOWN"));
+    }
+
+    @Test
+    @DisplayName("Phase 2: AbstractReportGenerator evaluates operational status correctly")
+    void testAbstractReportGeneratorEvaluateStatus() {
+        TestReportGenerator generator = new TestReportGenerator();
+
+        // Critical incident
+        Incident critical = new Incident("C1", "Crit", IncidentSeverity.CRITICAL, IncidentCategory.MEMORY_CRITICAL_FAILURE, "Crit", null, List.of(), List.of(), List.of());
+        AnalysisResult critResult = new AnalysisResult("crit.log", List.of(), null, List.of(), List.of(critical));
+        assertEquals("CRITICAL", generator.evaluateStatus(critResult));
+
+        // Warning incident
+        Incident warning = new Incident("W1", "Warn", IncidentSeverity.HIGH, IncidentCategory.APPLICATION_CRASH, "Warn", null, List.of(), List.of(), List.of());
+        AnalysisResult warnResult = new AnalysisResult("warn.log", List.of(), null, List.of(), List.of(warning));
+        assertEquals("WARNING", generator.evaluateStatus(warnResult));
+
+        // Healthy result
+        AnalysisResult healthyResult = new AnalysisResult("health.log", List.of(), null, List.of(), List.of());
+        assertEquals("HEALTHY", generator.evaluateStatus(healthyResult));
+
+        // Null result
+        assertEquals("HEALTHY", generator.evaluateStatus(null));
+    }
+
+    @Test
+    @DisplayName("Phase 2: All report generators handle null AnalysisResult gracefully")
+    void testNullAnalysisResultHandling() {
+        assertEquals("No analysis result provided.", new ConsoleReportGenerator().generate(null));
+        assertEquals("{}", new JsonReportGenerator().generate(null));
+        assertEquals("# Log Analysis Report\n\nNo analysis result provided.\n", new MarkdownReportGenerator().generate(null));
+    }
+
+    static class TestReportGenerator extends AbstractReportGenerator {
+        @Override
+        public String generate(AnalysisResult result) {
+            return "test";
+        }
+    }
 }

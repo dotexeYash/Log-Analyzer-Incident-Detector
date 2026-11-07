@@ -7,12 +7,11 @@ import com.loganalyzer.model.LogLevel;
 import com.loganalyzer.model.LogStatistics;
 
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 
 /**
  * Generates structured JSON reports suitable for ingestion by SIEM tools, monitoring dashboards, or CI pipelines.
  */
-public class JsonReportGenerator implements ReportGenerator {
+public class JsonReportGenerator extends AbstractReportGenerator {
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -23,13 +22,11 @@ public class JsonReportGenerator implements ReportGenerator {
         }
 
         StringBuilder sb = new StringBuilder();
-        LogStatistics stats = result.getStatistics() != null
-                ? result.getStatistics()
-                : new LogStatistics(0, Map.of(), null, null, Map.of(), Map.of(), Map.of(), 0.0, 0.0);
+        LogStatistics stats = resolveStatistics(result);
 
         sb.append("{\n");
         sb.append(indent(1)).append("\"sourceName\": \"").append(escape(result.getSourceName())).append("\",\n");
-        sb.append(indent(1)).append("\"status\": \"").append(result.hasCriticalIncidents() ? "CRITICAL" : (result.hasIncidents() ? "WARNING" : "HEALTHY")).append("\",\n");
+        sb.append(indent(1)).append("\"status\": \"").append(evaluateStatus(result)).append("\",\n");
         sb.append(indent(1)).append("\"statistics\": {\n");
         sb.append(indent(2)).append("\"totalLogs\": ").append(stats.getTotalLogs()).append(",\n");
         sb.append(indent(2)).append("\"errorRatePercentage\": ").append(String.format("%.2f", stats.getErrorPercentage())).append(",\n");
