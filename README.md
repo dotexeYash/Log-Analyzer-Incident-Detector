@@ -291,11 +291,20 @@ Example:
 
 ### Exit Codes
 
+#### Single-File Analysis (`-f` / `--file`)
+
 | Code | Meaning                                              |
 | ---- | ---------------------------------------------------- |
 | `0`  | Analysis completed without critical issues.          |
 | `1`  | Invalid arguments, input, or execution error.        |
 | `2`  | One or more critical operational incidents detected. |
+
+#### Demonstration Mode (`--demo`)
+
+| Code | Meaning                                                                                                              |
+| ---- | -------------------------------------------------------------------------------------------------------------------- |
+| `0`  | Demonstration suite finished execution successfully, even if individual sample scenarios detect critical incidents. |
+| `1`  | Execution error occurred during demonstration suite.                                                                 |
 
 ---
 

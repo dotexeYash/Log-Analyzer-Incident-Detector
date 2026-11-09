@@ -300,8 +300,9 @@ public class AnomalyDetector {
         for (Map.Entry<String, List<LogEntry>> group : errorGroups.entrySet()) {
             if (group.getValue().size() >= identicalErrorThreshold) {
                 List<LogEntry> matches = group.getValue();
-                LocalDateTime start = matches.get(0).getTimestamp();
-                LocalDateTime end = matches.get(matches.size() - 1).getTimestamp();
+                List<LocalDateTime> timestamps = extractSortedTimestamps(matches);
+                LocalDateTime start = timestamps.isEmpty() ? null : timestamps.get(0);
+                LocalDateTime end = timestamps.isEmpty() ? null : timestamps.get(timestamps.size() - 1);
                 double score = Math.min(1.0, 0.6 + (matches.size() / 25.0));
 
                 anomalies.add(new Anomaly(
@@ -351,8 +352,9 @@ public class AnomalyDetector {
         }
 
         if (matched.size() >= threshold) {
-            LocalDateTime start = matched.get(0).getTimestamp();
-            LocalDateTime end = matched.get(matched.size() - 1).getTimestamp();
+            List<LocalDateTime> timestamps = extractSortedTimestamps(matched);
+            LocalDateTime start = timestamps.isEmpty() ? null : timestamps.get(0);
+            LocalDateTime end = timestamps.isEmpty() ? null : timestamps.get(timestamps.size() - 1);
             double score = Math.min(1.0, baseScore + (matched.size() * 0.02));
 
             anomalies.add(new Anomaly(
@@ -366,5 +368,22 @@ public class AnomalyDetector {
                     score
             ));
         }
+    }
+
+    /**
+     * Extracts all non-null timestamps from the given log entries and sorts them chronologically.
+     *
+     * @param entries log entries to extract timestamps from
+     * @return chronologically sorted list of non-null timestamps
+     */
+    private List<LocalDateTime> extractSortedTimestamps(List<LogEntry> entries) {
+        List<LocalDateTime> timestamps = new ArrayList<>();
+        for (LogEntry entry : entries) {
+            if (entry != null && entry.getTimestamp() != null) {
+                timestamps.add(entry.getTimestamp());
+            }
+        }
+        Collections.sort(timestamps);
+        return timestamps;
     }
 }

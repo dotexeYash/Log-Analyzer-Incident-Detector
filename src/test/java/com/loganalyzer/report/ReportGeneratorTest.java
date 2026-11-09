@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -218,6 +219,36 @@ class ReportGeneratorTest {
         assertEquals("No analysis result provided.", new ConsoleReportGenerator().generate(null));
         assertEquals("{}", new JsonReportGenerator().generate(null));
         assertEquals("# Log Analysis Report\n\nNo analysis result provided.\n", new MarkdownReportGenerator().generate(null));
+    }
+
+    @Test
+    @DisplayName("Phase 3: JsonReportGenerator formats floating-point values with dots under Locale.GERMANY")
+    void testJsonReportFloatingPointFormattingUnderGermanLocale() {
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.GERMANY);
+
+            JsonReportGenerator generator = new JsonReportGenerator();
+            String json = generator.generate(sampleResult);
+
+            assertNotNull(json);
+
+            // Verify decimal numbers use dots, not commas
+            assertTrue(json.contains("\"errorRatePercentage\": 10.00"), "errorRatePercentage must use dot decimal separator");
+            assertTrue(json.contains("\"warningRatePercentage\": 10.00"), "warningRatePercentage must use dot decimal separator");
+            assertTrue(json.contains("\"severityScore\": 0.85"), "severityScore must use dot decimal separator");
+
+            // Verify commas are not emitted inside decimal numbers
+            assertFalse(json.contains("\"errorRatePercentage\": 10,00"), "errorRatePercentage must not contain comma");
+            assertFalse(json.contains("\"warningRatePercentage\": 10,00"), "warningRatePercentage must not contain comma");
+            assertFalse(json.contains("\"severityScore\": 0,85"), "severityScore must not contain comma");
+
+            // Verify JSON syntactic validity (starts with '{', ends with '}')
+            assertTrue(json.startsWith("{"));
+            assertTrue(json.endsWith("}\n") || json.endsWith("}"));
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
     }
 
     static class TestReportGenerator extends AbstractReportGenerator {

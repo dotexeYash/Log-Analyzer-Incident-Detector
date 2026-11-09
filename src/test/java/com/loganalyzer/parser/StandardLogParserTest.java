@@ -11,10 +11,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -243,5 +245,97 @@ class StandardLogParserTest {
         LogEntry entry = parser.parseLine("2026-11-03 01:14:02.123 [main] INFO com.example.UserService - Message", 1);
         assertNotNull(entry);
         assertEquals(LocalDateTime.of(2026, 11, 3, 1, 14, 2, 123_000_000), entry.getTimestamp());
+    }
+
+    @Test
+    @DisplayName("Phase 3: Zero-byte empty file parses safely to an empty list")
+    void testEmptyZeroByteFileParsesToEmptyList(@TempDir Path tempDir) throws IOException, InvalidLogFileException {
+        Path emptyFile = Files.createFile(tempDir.resolve("empty.log"));
+        List<LogEntry> entries = parser.parse(emptyFile);
+
+        assertNotNull(entries, "Parsed entries list should not be null");
+        assertTrue(entries.isEmpty(), "Zero-byte file must produce zero log entries");
+    }
+
+    @Test
+    @DisplayName("Phase 3: Blank file with only spaces, tabs, and newlines produces zero entries")
+    void testBlankFileWithWhitespaceAndNewlines(@TempDir Path tempDir) throws IOException, InvalidLogFileException {
+        Path blankFile = tempDir.resolve("blank.log");
+        Files.writeString(blankFile, "   \n\t\t\n  \r\n \n");
+        List<LogEntry> entries = parser.parse(blankFile);
+
+        assertNotNull(entries);
+        assertTrue(entries.isEmpty(), "File with only blank lines must produce zero log entries");
+    }
+
+    @Test
+    @DisplayName("Phase 3: Corrupted unparseable lines and malformed timestamps are handled safely")
+    void testCorruptedUnparseableLinesAndMalformedTimestamps() throws IOException {
+        // Completely unparseable line directly via parseLine returns null
+        assertNull(parser.parseLine("Random non-log text without structure", 1));
+
+        // When streamed via parse(InputStream), an unformatted leading line creates a fallback entry with UNKNOWN level
+        String corruptedContent = """
+                Random non-log preamble line
+                2026-11-09 10:00:00 [main] INFO com.service.App - Valid entry
+                """;
+        List<LogEntry> entries = parser.parse(new ByteArrayInputStream(corruptedContent.getBytes(StandardCharsets.UTF_8)));
+
+        assertEquals(2, entries.size(), "Should contain 2 entries (fallback + valid)");
+        LogEntry fallback = entries.get(0);
+        assertEquals(LogLevel.UNKNOWN, fallback.getLevel());
+        assertNull(fallback.getTimestamp());
+        assertEquals("Random non-log preamble line", fallback.getMessage());
+
+        LogEntry valid = entries.get(1);
+        assertEquals(LogLevel.INFO, valid.getLevel());
+        assertEquals("Valid entry", valid.getMessage());
+    }
+
+    @Test
+    @DisplayName("Phase 3: Log lines with out-of-order timestamps parse sequentially preserving file order")
+    void testOutOfOrderTimestampsParsing() throws IOException {
+        String content = """
+                2026-11-09 10:30:00 [main] INFO Service - Third in time, first in file
+                2026-11-09 10:10:00 [main] INFO Service - First in time, second in file
+                2026-11-09 10:20:00 [main] INFO Service - Second in time, third in file
+                """;
+        List<LogEntry> entries = parser.parse(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
+
+        assertEquals(3, entries.size());
+        assertEquals(LocalDateTime.of(2026, 11, 9, 10, 30, 0), entries.get(0).getTimestamp());
+        assertEquals(LocalDateTime.of(2026, 11, 9, 10, 10, 0), entries.get(1).getTimestamp());
+        assertEquals(LocalDateTime.of(2026, 11, 9, 10, 20, 0), entries.get(2).getTimestamp());
+    }
+
+    @Test
+    @DisplayName("Phase 3: Mixed input with valid entries, stack traces, blank lines and malformed content")
+    void testMixedInputWithValidEntriesCorruptedLinesAndStackTraces() throws IOException {
+        String mixedContent = """
+                2026-11-09 10:00:00 [main] INFO Service - Starting service
+                \t
+                2026-11-09 10:00:05 [main] ERROR Service - Failed operation
+                \tat com.service.Service.run(Service.java:10)
+                Caused by: java.io.IOException: Disk full
+
+
+                Unformatted unexpected log snippet
+                2026-11-09 10:00:10 [main] WARN Service - Warning received
+                """;
+        List<LogEntry> entries = parser.parse(new ByteArrayInputStream(mixedContent.getBytes(StandardCharsets.UTF_8)));
+
+        assertNotNull(entries);
+        assertFalse(entries.isEmpty());
+
+        // Entry 1: Starting service
+        LogEntry entry1 = entries.get(0);
+        assertEquals(LogLevel.INFO, entry1.getLevel());
+        assertEquals("Starting service", entry1.getMessage());
+
+        // Entry 2: Error with attached stack trace
+        LogEntry entry2 = entries.get(1);
+        assertEquals(LogLevel.ERROR, entry2.getLevel());
+        assertTrue(entry2.hasStackTrace());
+        assertTrue(entry2.getCombinedMessage().contains("java.io.IOException: Disk full"));
     }
 }

@@ -527,4 +527,132 @@ class AnomalyDetectorTest {
                 .anyMatch(a -> a.getType() == AnomalyType.HIGH_FREQUENCY_IDENTICAL_ERRORS);
         assertTrue(hasIdenticalError, "Should detect identical errors using injected aggregator normalization");
     }
+
+    @Test
+    @DisplayName("Phase 3 Regression: Identical errors with out-of-order timestamps should produce chronological window")
+    void testIdenticalErrorsWithOutOfOrderTimestamps() {
+        LocalDateTime t1000 = LocalDateTime.of(2026, 11, 9, 10, 0, 0);
+        LocalDateTime t1010 = LocalDateTime.of(2026, 11, 9, 10, 10, 0);
+        LocalDateTime t1020 = LocalDateTime.of(2026, 11, 9, 10, 20, 0);
+        LocalDateTime t1030 = LocalDateTime.of(2026, 11, 9, 10, 30, 0);
+
+        // Reverse chronological order (latest first, earliest last)
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(t1030).level(LogLevel.ERROR).message("Database query timed out").build(),
+                LogEntry.builder().lineNumber(2).timestamp(t1020).level(LogLevel.ERROR).message("Database query timed out").build(),
+                LogEntry.builder().lineNumber(3).timestamp(t1010).level(LogLevel.ERROR).message("Database query timed out").build(),
+                LogEntry.builder().lineNumber(4).timestamp(t1000).level(LogLevel.ERROR).message("Database query timed out").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        Anomaly anomaly = anomalies.stream()
+                .filter(a -> a.getType() == AnomalyType.HIGH_FREQUENCY_IDENTICAL_ERRORS)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should detect identical errors anomaly"));
+
+        assertNotNull(anomaly.getStartTime());
+        assertNotNull(anomaly.getEndTime());
+        assertEquals(t1000, anomaly.getStartTime(), "Start time should be the earliest timestamp (10:00:00)");
+        assertEquals(t1030, anomaly.getEndTime(), "End time should be the latest timestamp (10:30:00)");
+        assertFalse(anomaly.getStartTime().isAfter(anomaly.getEndTime()), "Start time must never be after end time");
+    }
+
+    @Test
+    @DisplayName("Phase 3 Regression: Pattern anomalies with out-of-order timestamps should produce chronological window")
+    void testPatternAnomaliesWithOutOfOrderTimestamps() {
+        LocalDateTime t1005 = LocalDateTime.of(2026, 11, 9, 10, 5, 0);
+        LocalDateTime t1015 = LocalDateTime.of(2026, 11, 9, 10, 15, 0);
+        LocalDateTime t1025 = LocalDateTime.of(2026, 11, 9, 10, 25, 0);
+
+        // Scrambled order for timeout cascade (threshold 3)
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(t1025).level(LogLevel.ERROR).message("Connection timed out to host A").build(),
+                LogEntry.builder().lineNumber(2).timestamp(t1005).level(LogLevel.ERROR).message("Read timed out on socket B").build(),
+                LogEntry.builder().lineNumber(3).timestamp(t1015).level(LogLevel.ERROR).message("SocketTimeoutException in client C").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        Anomaly anomaly = anomalies.stream()
+                .filter(a -> a.getType() == AnomalyType.SERVICE_TIMEOUT_SPIKE)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should detect service timeout spike anomaly"));
+
+        assertNotNull(anomaly.getStartTime());
+        assertNotNull(anomaly.getEndTime());
+        assertEquals(t1005, anomaly.getStartTime(), "Start time should be earliest timestamp (10:05:00)");
+        assertEquals(t1025, anomaly.getEndTime(), "End time should be latest timestamp (10:25:00)");
+        assertFalse(anomaly.getStartTime().isAfter(anomaly.getEndTime()), "Start time must never be after end time");
+    }
+
+    @Test
+    @DisplayName("Phase 3 Regression: Matching entry with null timestamp followed by valid timestamps preserves timestamps")
+    void testMatchingEntryWithNullTimestampFollowedByValidTimestamps() {
+        LocalDateTime t1005 = LocalDateTime.of(2026, 11, 9, 10, 5, 0);
+        LocalDateTime t1015 = LocalDateTime.of(2026, 11, 9, 10, 15, 0);
+        LocalDateTime t1025 = LocalDateTime.of(2026, 11, 9, 10, 25, 0);
+
+        // Leading entry has null timestamp, remaining entries have out-of-order timestamps
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(null).level(LogLevel.ERROR).message("NullPointer in Service worker").build(),
+                LogEntry.builder().lineNumber(2).timestamp(t1025).level(LogLevel.ERROR).message("NullPointer in Service worker").build(),
+                LogEntry.builder().lineNumber(3).timestamp(t1005).level(LogLevel.ERROR).message("NullPointer in Service worker").build(),
+                LogEntry.builder().lineNumber(4).timestamp(t1015).level(LogLevel.ERROR).message("NullPointer in Service worker").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        Anomaly anomaly = anomalies.stream()
+                .filter(a -> a.getType() == AnomalyType.HIGH_FREQUENCY_IDENTICAL_ERRORS)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should detect identical errors anomaly"));
+
+        assertNotNull(anomaly.getStartTime(), "Start time should not be null when valid timestamps exist");
+        assertNotNull(anomaly.getEndTime(), "End time should not be null when valid timestamps exist");
+        assertEquals(t1005, anomaly.getStartTime(), "Start time should be the earliest non-null timestamp (10:05:00)");
+        assertEquals(t1025, anomaly.getEndTime(), "End time should be the latest non-null timestamp (10:25:00)");
+        assertFalse(anomaly.getStartTime().isAfter(anomaly.getEndTime()));
+    }
+
+    @Test
+    @DisplayName("Phase 3 Regression: All matching entries having null timestamps safely preserves null start and end")
+    void testAllMatchingEntriesWithNullTimestamps() {
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(null).level(LogLevel.ERROR).message("Unresolvable system crash").build(),
+                LogEntry.builder().lineNumber(2).timestamp(null).level(LogLevel.ERROR).message("Unresolvable system crash").build(),
+                LogEntry.builder().lineNumber(3).timestamp(null).level(LogLevel.ERROR).message("Unresolvable system crash").build(),
+                LogEntry.builder().lineNumber(4).timestamp(null).level(LogLevel.ERROR).message("Unresolvable system crash").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        Anomaly anomaly = anomalies.stream()
+                .filter(a -> a.getType() == AnomalyType.HIGH_FREQUENCY_IDENTICAL_ERRORS)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should detect identical errors anomaly even without timestamps"));
+
+        assertNull(anomaly.getStartTime(), "Start time should be null when all entries lack timestamps");
+        assertNull(anomaly.getEndTime(), "End time should be null when all entries lack timestamps");
+        assertEquals(4, anomaly.getAffectedLogCount());
+    }
+
+    @Test
+    @DisplayName("Phase 3 Regression: Pattern anomaly with leading null timestamp preserves valid timestamps")
+    void testPatternAnomalyWithLeadingNullTimestamp() {
+        LocalDateTime t1010 = LocalDateTime.of(2026, 11, 9, 10, 10, 0);
+        LocalDateTime t1020 = LocalDateTime.of(2026, 11, 9, 10, 20, 0);
+
+        List<LogEntry> entries = List.of(
+                LogEntry.builder().lineNumber(1).timestamp(null).level(LogLevel.WARN).message("401 Unauthorized access attempt").build(),
+                LogEntry.builder().lineNumber(2).timestamp(t1020).level(LogLevel.WARN).message("401 Unauthorized access attempt").build(),
+                LogEntry.builder().lineNumber(3).timestamp(t1010).level(LogLevel.WARN).message("401 Unauthorized access attempt").build()
+        );
+
+        List<Anomaly> anomalies = detector.detectAnomalies(entries);
+        Anomaly anomaly = anomalies.stream()
+                .filter(a -> a.getType() == AnomalyType.SECURITY_SUSPICIOUS_ACCESS)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should detect security anomaly"));
+
+        assertEquals(t1010, anomaly.getStartTime(), "Start time should be earliest valid timestamp (10:10:00)");
+        assertEquals(t1020, anomaly.getEndTime(), "End time should be latest valid timestamp (10:20:00)");
+        assertFalse(anomaly.getStartTime().isAfter(anomaly.getEndTime()));
+    }
 }

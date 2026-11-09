@@ -7,6 +7,7 @@ import com.loganalyzer.model.LogLevel;
 import com.loganalyzer.model.LogStatistics;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 /**
  * Generates structured JSON reports suitable for ingestion by SIEM tools, monitoring dashboards, or CI pipelines.
@@ -29,8 +30,8 @@ public class JsonReportGenerator extends AbstractReportGenerator {
         sb.append(indent(1)).append("\"status\": \"").append(evaluateStatus(result)).append("\",\n");
         sb.append(indent(1)).append("\"statistics\": {\n");
         sb.append(indent(2)).append("\"totalLogs\": ").append(stats.getTotalLogs()).append(",\n");
-        sb.append(indent(2)).append("\"errorRatePercentage\": ").append(String.format("%.2f", stats.getErrorPercentage())).append(",\n");
-        sb.append(indent(2)).append("\"warningRatePercentage\": ").append(String.format("%.2f", stats.getWarningPercentage())).append(",\n");
+        sb.append(indent(2)).append("\"errorRatePercentage\": ").append(String.format(Locale.ROOT, "%.2f", stats.getErrorPercentage())).append(",\n");
+        sb.append(indent(2)).append("\"warningRatePercentage\": ").append(String.format(Locale.ROOT, "%.2f", stats.getWarningPercentage())).append(",\n");
         sb.append(indent(2)).append("\"firstTimestamp\": ").append(stats.getFirstTimestamp() != null ? "\"" + stats.getFirstTimestamp().format(TIME_FORMAT) + "\"" : "null").append(",\n");
         sb.append(indent(2)).append("\"lastTimestamp\": ").append(stats.getLastTimestamp() != null ? "\"" + stats.getLastTimestamp().format(TIME_FORMAT) + "\"" : "null").append(",\n");
 
@@ -54,7 +55,7 @@ public class JsonReportGenerator extends AbstractReportGenerator {
             sb.append(indent(3)).append("\"id\": \"").append(escape(a.getId())).append("\",\n");
             sb.append(indent(3)).append("\"type\": \"").append(a.getType().name()).append("\",\n");
             sb.append(indent(3)).append("\"description\": \"").append(escape(a.getDescription())).append("\",\n");
-            sb.append(indent(3)).append("\"severityScore\": ").append(String.format("%.2f", a.getSeverityScore())).append(",\n");
+            sb.append(indent(3)).append("\"severityScore\": ").append(String.format(Locale.ROOT, "%.2f", a.getSeverityScore())).append(",\n");
             sb.append(indent(3)).append("\"affectedLogCount\": ").append(a.getAffectedLogCount()).append("\n");
             sb.append(indent(2)).append("}").append(i < result.getAnomalies().size() - 1 ? "," : "").append("\n");
         }

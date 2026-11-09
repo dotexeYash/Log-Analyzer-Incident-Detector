@@ -331,10 +331,15 @@ public class Main {
               --demo                          Execute demonstration against all bundled sample scenarios
               -h,   --help                    Display this help message
 
-            Exit Codes:
+            Exit Codes (Single-File Analysis):
               0 - Analysis completed without critical issues
               1 - Error during execution or invalid inputs
               2 - One or more CRITICAL operational incidents detected
+
+            Exit Codes (Demonstration Mode --demo):
+              0 - Demonstration suite finished execution successfully (even if
+                  individual sample scenarios detect CRITICAL incidents)
+              1 - Execution error occurred during demonstration
             """);
     }
 }

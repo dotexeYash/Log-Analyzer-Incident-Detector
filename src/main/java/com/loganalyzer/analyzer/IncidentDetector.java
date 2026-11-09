@@ -22,10 +22,9 @@ public class IncidentDetector {
      * Synthesizes detected anomalies into categorized, actionable incidents.
      *
      * @param anomalies list of detected anomalies
-     * @param entries original log entries for root-cause context
      * @return prioritized list of incidents
      */
-    public List<Incident> detectIncidents(List<Anomaly> anomalies, List<LogEntry> entries) {
+    public List<Incident> detectIncidents(List<Anomaly> anomalies) {
         if (anomalies == null || anomalies.isEmpty()) {
             return Collections.emptyList();
         }
@@ -166,6 +165,17 @@ public class IncidentDetector {
         }
 
         return incidents;
+    }
+
+    /**
+     * Overloaded method preserving backward compatibility with legacy callers.
+     *
+     * @param anomalies list of detected anomalies
+     * @param entries original log entries (unused, retained for backward compatibility)
+     * @return prioritized list of incidents
+     */
+    public List<Incident> detectIncidents(List<Anomaly> anomalies, List<LogEntry> entries) {
+        return detectIncidents(anomalies);
     }
 
     private List<Anomaly> findAnomalies(List<Anomaly> anomalies, AnomalyType type) {
