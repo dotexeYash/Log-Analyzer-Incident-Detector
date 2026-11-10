@@ -1,5 +1,14 @@
 # 🔍 Log Analyzer & Incident Detector
 
+<p align="center">
+  <img src="assets/project-banner.png" alt="Log Analyzer & Incident Detector Banner" width="100%">
+</p>
+
+![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Apache Maven](https://img.shields.io/badge/Apache%20Maven-3.10.0-C71A36?logo=apachemaven&logoColor=white)
+![JUnit 5](https://img.shields.io/badge/JUnit-5-25A162?logo=junit5&logoColor=white)
+![144 Tests Passing](https://img.shields.io/badge/tests-144%20passing-brightgreen)
+
 **Turn raw application logs into actionable operational insights using Java 21.**
 
 A modular Java application that analyzes application logs, detects anomalous patterns, identifies critical operational incidents, and generates detailed reports with actionable remediation recommendations.
@@ -145,6 +154,9 @@ Log-Analyzer-Incident-Detector/
 │           ├── Task-4/                         # Parsing edge cases & timestamp sort fix
 │           ├── Task-5/                         # LogAnalyzer constructor chaining
 │           └── CLI-EXIT-CODE-REPORT.md         # CLI exit-code investigation & Option A
+│
+├── assets/                                     # Project media & documentation assets
+│   └── project-banner.png
 │
 ├── sample-logs/                                # Realistic operational evaluation logs
 │   ├── normal-operations.log                  # Baseline healthy HTTP traffic
