@@ -78,6 +78,37 @@ Each incident provides the root cause anomaly, triggering criteria, contextual t
 
 ---
 
+## 📸 Application Screenshots
+
+Visual demonstration of the Log Analyzer and Incident Detector CLI processing operational log scenarios and generating multi-format reports:
+
+### 1. Normal Operations
+Terminal dashboard showing clean analysis of routine HTTP operations with 0 anomalies and 0 incidents detected:
+
+![Normal Operations](assets/screenshots/01-normal-operations.png)
+
+### 2. Critical Database Incident
+Detection of database connection pool exhaustion (HikariCP timeout) classified as a `CRITICAL` operational incident with remediation recommendations:
+
+![Critical Database Incident](assets/screenshots/02-critical-database-incident.png)
+
+### 3. Security Attack Detection
+Detection of repeated authentication failures, brute-force access attempts, and SQL injection patterns classified as `HIGH` severity:
+
+![Security Attack Detection](assets/screenshots/03-security-attack.png)
+
+### 4. JSON Report Generation
+Execution of the CLI command generating a machine-readable JSON report saved to disk:
+
+![JSON Report Generation](assets/screenshots/04-json-report-generation.png)
+
+### 5. Generated JSON Report Preview
+Structured JSON report payload containing detailed metadata, level distributions, detected anomalies, and categorized incidents:
+
+![Generated JSON Report Preview](assets/screenshots/05-json-report-final.png)
+
+---
+
 ## 🛠️ Technologies Used
 
 * **Java 21 (LTS):** Built using modern Java features including:
@@ -156,7 +187,8 @@ Log-Analyzer-Incident-Detector/
 │           └── CLI-EXIT-CODE-REPORT.md         # CLI exit-code investigation & Option A
 │
 ├── assets/                                     # Project media & documentation assets
-│   └── project-banner.png
+│   ├── project-banner.png                      # Repository banner image
+│   └── screenshots/                            # Application execution screenshots
 │
 ├── sample-logs/                                # Realistic operational evaluation logs
 │   ├── normal-operations.log                  # Baseline healthy HTTP traffic
