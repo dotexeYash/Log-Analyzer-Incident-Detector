@@ -1,4 +1,4 @@
-# 🔍 Log Analyzer & Incident Detector
+#  Log Analyzer & Incident Detector
 
 <p align="center">
   <img src="assets/project-banner.png" alt="Log Analyzer & Incident Detector Banner" width="100%">
@@ -15,7 +15,7 @@ A modular Java application that analyzes application logs, detects anomalous pat
 
 ---
 
-## 📌 Overview
+##  Overview
 
 Application logs contain valuable telemetry regarding system health, operational failures, and security events. However, identifying meaningful patterns across thousands of log entries is challenging during live incidents.
 
@@ -30,7 +30,7 @@ Application logs contain valuable telemetry regarding system health, operational
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
 ### 1. Robust Log Parsing
 * Parses standard Spring Boot / Logback patterns and bracketed timestamp formats.
@@ -78,7 +78,7 @@ Each incident provides the root cause anomaly, triggering criteria, contextual t
 
 ---
 
-## 📸 Application Screenshots
+##  Application Screenshots
 
 Visual demonstration of the Log Analyzer and Incident Detector CLI processing operational log scenarios and generating multi-format reports:
 
@@ -109,7 +109,7 @@ Structured JSON report payload containing detailed metadata, level distributions
 
 ---
 
-## 🛠️ Technologies Used
+##  Technologies Used
 
 * **Java 21 (LTS):** Built using modern Java features including:
   * **Records:** Immutable configuration record (`CliConfig`).
@@ -124,7 +124,7 @@ Structured JSON report payload containing detailed metadata, level distributions
 
 ---
 
-## 🏗️ Architecture & OOP Design
+##  Architecture & OOP Design
 
 The application follows clean object-oriented architecture, applying design patterns for modularity and testability:
 
@@ -153,7 +153,7 @@ flowchart TD
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```text
 Log-Analyzer-Incident-Detector/
@@ -222,7 +222,7 @@ Log-Analyzer-Incident-Detector/
 
 ---
 
-## 🚀 Development Phases
+##  Development Phases
 
 The project was developed in three systematic, documented engineering phases:
 
@@ -251,7 +251,7 @@ The project was developed in three systematic, documented engineering phases:
 
 ---
 
-## ⚙️ Prerequisites
+##  Prerequisites
 
 * **Java Development Kit (JDK):** Version 21 or higher
 * **Apache Maven:** Version 3.8 or higher
@@ -266,7 +266,7 @@ git --version
 
 ---
 
-## 🏁 Getting Started
+##  Getting Started
 
 ### 1. Clone the Repository
 ```bash
@@ -288,7 +288,7 @@ java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
 
 ---
 
-## 💻 Usage Examples
+##  Usage Examples
 
 ### 1. Run Demonstration Mode
 Analyzes all bundled sample scenarios back-to-back:
@@ -321,7 +321,7 @@ java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/securit
 
 ---
 
-## 📖 Command-Line Reference
+##  Command-Line Reference
 
 | Option | Short Flag | Description | Default |
 | :--- | :--- | :--- | :--- |
@@ -350,7 +350,7 @@ java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/securit
 
 ---
 
-## 🧪 Testing & Verification
+##  Testing & Verification
 
 The project enforces quality assurance through unit tests, parameterized tests, boundary tests, and end-to-end integration workflows.
 
@@ -402,7 +402,7 @@ mvn test
 
 ---
 
-## 🔮 Future Improvements
+##  Future Improvements
 
 * Add a web-based graphical user interface dashboard.
 * Support real-time log tailing and streaming via WebSockets.
@@ -412,7 +412,7 @@ mvn test
 
 ---
 
-## 👨‍💻 Author
+##  Author
 
 **Yash Lowanshi**<br>
 B.Tech — Computer Science and Engineering<br>
