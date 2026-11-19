@@ -13,6 +13,7 @@ import com.loganalyzer.report.ConsoleReportGenerator;
 import com.loganalyzer.report.JsonReportGenerator;
 import com.loganalyzer.report.MarkdownReportGenerator;
 import com.loganalyzer.report.ReportGenerator;
+import com.loganalyzer.ui.LogAnalyzerGui;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +37,8 @@ public class Main {
             int burstThreshold,
             int windowSeconds,
             boolean isDemo,
-            boolean isHelp
+            boolean isHelp,
+            boolean isGui
     ) {}
 
     public static void main(String[] args) {
@@ -53,6 +55,16 @@ public class Main {
         if (config.isHelp()) {
             printUsage();
             System.exit(0);
+            return;
+        }
+
+        if (config.isGui()) {
+            try {
+                LogAnalyzerGui.launch(args);
+            } catch (IllegalStateException e) {
+                System.err.println("Error: Unable to start graphical interface - " + e.getMessage());
+                System.exit(1);
+            }
             return;
         }
 
@@ -148,6 +160,7 @@ public class Main {
         String format = "console";
         String outputPath = null;
         boolean isDemo = false;
+        boolean isGui = false;
         int burstThreshold = 5;
         int windowSeconds = 60;
 
@@ -155,7 +168,8 @@ public class Main {
             String arg = args[i];
             switch (arg) {
                 case "-h", "--help" -> {
-                    return new CliConfig(null, format, outputPath, burstThreshold, windowSeconds, false, true);
+                    return new CliConfig(null, format, outputPath, burstThreshold, windowSeconds,
+                            false, true, false);
                 }
                 case "-f", "--file" -> {
                     filePath = requireValue(args, i, arg);
@@ -186,6 +200,7 @@ public class Main {
                     i++;
                 }
                 case "--demo" -> isDemo = true;
+                case "--gui" -> isGui = true;
                 default -> {
                     if (arg.startsWith("-")) {
                         throw new IllegalArgumentException("Unknown option: " + arg);
@@ -201,7 +216,15 @@ public class Main {
             }
         }
 
-        return new CliConfig(filePath, format, outputPath, burstThreshold, windowSeconds, isDemo, false);
+        if (isGui && isDemo) {
+            throw new IllegalArgumentException("--gui and --demo cannot be used together");
+        }
+        if (isGui && filePath != null) {
+            throw new IllegalArgumentException("--gui cannot be combined with a log file argument");
+        }
+
+        return new CliConfig(filePath, format, outputPath, burstThreshold, windowSeconds,
+                isDemo, false, isGui);
     }
 
     private static String requireValue(String[] args, int index, String flag) {
@@ -328,7 +351,8 @@ public class Main {
               -o,   --output <path>           Optional output destination file path
               -b,   --burst-threshold <num>   Consecutive error threshold for bursts (default: 5)
               -w,   --window <seconds>        Time window in seconds for burst detection (default: 60)
-              --demo                          Execute demonstration against all bundled sample scenarios
+                    --gui                     Start the Java desktop interface
+                    --demo                    Execute demonstration against all bundled sample scenarios
               -h,   --help                    Display this help message
 
             Exit Codes (Single-File Analysis):

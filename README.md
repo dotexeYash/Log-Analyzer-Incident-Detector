@@ -76,6 +76,14 @@ Each incident provides the root cause anomaly, triggering criteria, contextual t
 * **Markdown (`.md`):** Formatted documentation with severity indicators, tables, and code fences for post-mortem incident reports.
 * **JSON (`.json`):** Machine-readable, locale-independent (`Locale.ROOT`) structured payload for ingestion into SIEMs, dashboards, or CI/CD pipelines.
 
+### 6. Native Java Desktop Interface
+* **Java-only UI:** The graphical interface is implemented entirely with Java Swing and Java2D—there are no HTML, CSS, JavaScript, or frontend build tools.
+* **Local file analysis:** Select `.log` or `.txt` files using the system file chooser and analyze them directly with the existing engine.
+* **Analysis overview:** Review log volume, error rate, anomaly count, incidents, activity over time, level distribution, and recurring errors.
+* **Incident review:** Select incidents to read summaries, evidence, and remediation recommendations.
+* **Log explorer:** Search parsed entries, filter by level, inspect stack traces, show incident-related evidence, and export JSON reports.
+* **Detection settings:** Adjust the error-burst threshold and sliding detection window from the desktop application.
+
 ---
 
 ##  Application Screenshots
@@ -119,8 +127,9 @@ Structured JSON report payload containing detailed metadata, level distributions
   * **Stream API & Functional Pipelines:** Declarative anomaly filtering and statistical aggregation.
 * **Apache Maven:** Dependency management, compiler lifecycle configuration (`release 21`), and automated test execution via `maven-surefire-plugin`.
 * **JUnit 5 (Jupiter 5.10.2):** Comprehensive test framework leveraging `@Test`, `@ParameterizedTest`, `@ValueSource`, `@TempDir`, and robust lifecycle assertions (`assertNotNull`, `assertSame`, `assertThrows`).
+* **Java Swing and Java2D:** Native desktop interface and activity chart implemented entirely with standard JDK APIs.
 * **Git & GitHub:** Version control, atomic commits, and documentation traceability.
-* **Zero External Runtime Dependencies:** Implemented exclusively with standard Java 21 platform libraries (`java.nio.file`, `java.time`, `java.util.regex`), ensuring minimal attack surface, instant startup, and zero dependency conflicts.
+* **Zero External Runtime Dependencies:** Implemented exclusively with standard Java 21 platform libraries (`java.nio.file`, `java.time`, `java.util.regex`, `javax.swing`, `java.awt`), ensuring minimal attack surface and zero dependency conflicts.
 
 ---
 
@@ -205,7 +214,8 @@ Log-Analyzer-Incident-Detector/
     │   │   ├── model/                          # Domain models (LogEntry, Anomaly, Incident)
     │   │   ├── parser/                         # StandardLogParser & timestamp parsing
     │   │   ├── report/                         # AbstractReportGenerator & format renderers
-    │   │   └── util/                           # FrequencyDistribution<T> container
+    │   │   ├── util/                           # FrequencyDistribution<T> container
+    │   │   └── ui/                             # Native Swing desktop interface
     │   │
     │   └── resources/
     │       └── sample-logs/                    # Bundled fallback classpath resources
@@ -286,6 +296,36 @@ This compiles the code, executes the automated test suite (144 tests), and produ
 java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
 ```
 
+### 4. Start the Java Desktop Interface
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
+```
+
+The desktop application includes four bundled scenarios, local file selection, adjustable anomaly thresholds, incident details, searchable evidence, an activity chart, and JSON export. It uses only standard Java 21 APIs.
+
+#### Niri, Hyprland, and Wayland
+
+Swing runs through XWayland on Java 21. The launcher detects Niri, Hyprland, and other Wayland sessions automatically, enables Java's non-reparenting window-manager mode, disables the problematic OpenGL pipeline, and uses the cross-platform Swing look and feel.
+
+Niri does not provide built-in XWayland integration on all installations. Ensure `xwayland-satellite` is installed and running, and verify that it provides a display:
+
+```bash
+echo "$DISPLAY"
+pgrep -a xwayland-satellite
+```
+
+After the XWayland bridge is available, use the normal command:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
+```
+
+If the environment is not detected automatically, the equivalent manual launch is:
+
+```bash
+_JAVA_AWT_WM_NONREPARENTING=1 java -Dsun.java2d.opengl=false -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
+```
+
 ---
 
 ##  Usage Examples
@@ -330,6 +370,7 @@ java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/securit
 | `--output <path>` | `-o` | Destination file path to save report | Standard output |
 | `--burst-threshold <n>`| `-b` | Consecutive error burst threshold | `5` |
 | `--window <seconds>` | `-w` | Burst detection time window in seconds | `60` |
+| `--gui` | — | Start the native Java desktop interface | `false` |
 | `--demo` | — | Execute demonstration against bundled scenarios | `false` |
 | `--help` | `-h` | Display usage instructions and exit | — |
 
@@ -404,7 +445,6 @@ mvn test
 
 ##  Future Improvements
 
-* Add a web-based graphical user interface dashboard.
 * Support real-time log tailing and streaming via WebSockets.
 * Introduce configurable alerting webhooks (Slack, PagerDuty, Email).
 * Support additional distributed log formats (e.g., JSON log lines, syslog RFC 5424).
