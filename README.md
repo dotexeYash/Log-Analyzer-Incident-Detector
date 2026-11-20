@@ -1,4 +1,4 @@
-#  Log Analyzer & Incident Detector
+# Log Analyzer & Incident Detector
 
 <p align="center">
   <img src="assets/project-banner.png" alt="Log Analyzer & Incident Detector Banner" width="100%">
@@ -9,13 +9,34 @@
 ![JUnit 5](https://img.shields.io/badge/JUnit-5-25A162?logo=junit5&logoColor=white)
 ![144 Tests Passing](https://img.shields.io/badge/tests-144%20passing-brightgreen)
 
-**Turn raw application logs into actionable operational insights using Java 21.**
+**Turn raw application logs into actionable operational insights with a native desktop dashboard or an automation-friendly CLI.**
 
-A modular Java application that analyzes application logs, detects anomalous patterns, identifies critical operational incidents, and generates detailed reports with actionable remediation recommendations.
+A Java 21 application with zero external runtime dependencies that parses application logs, detects anomalous patterns, prioritizes operational incidents, and generates reports with actionable remediation recommendations.
+
+[Quick Start](#quick-start) · [Desktop App](#desktop-application) · [CLI](#command-line-usage) · [Architecture](#architecture--oop-design) · [Testing](#testing--verification)
 
 ---
 
-##  Overview
+## Quick Start
+
+**Requirements:** JDK 21 or newer and Apache Maven 3.8 or newer.
+
+```bash
+git clone https://github.com/dotexeYash/Log-Analyzer-Incident-Detector.git
+cd Log-Analyzer-Incident-Detector
+mvn clean package
+java -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
+```
+
+The build runs all 144 automated tests and creates an executable JAR in `target/`. To explore the application in a terminal instead, run:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
+```
+
+---
+
+## Overview
 
 Application logs contain valuable telemetry regarding system health, operational failures, and security events. However, identifying meaningful patterns across thousands of log entries is challenging during live incidents.
 
@@ -26,11 +47,12 @@ Application logs contain valuable telemetry regarding system health, operational
 * **Detecting** anomalous behavioral patterns such as sliding-window error bursts, database failures, resource exhaustion, and security attack signatures.
 * **Categorizing** anomalies into prioritized operational incidents with deterministic severity assignment.
 * **Providing** forensic log evidence and actionable remediation steps for on-call engineers.
-* **Generating** reports across multiple formats (terminal Console, Markdown, and JSON).
+* **Generating** reports across multiple formats (terminal console, Markdown, and JSON).
+* **Visualizing** log activity, level distributions, recurring errors, and incident evidence in a native desktop interface.
 
 ---
 
-##  Key Features
+## Key Features
 
 ### 1. Robust Log Parsing
 * Parses standard Spring Boot / Logback patterns and bracketed timestamp formats.
@@ -86,9 +108,137 @@ Each incident provides the root cause anomaly, triggering criteria, contextual t
 
 ---
 
-##  Application Screenshots
+## Desktop Application
 
-Visual demonstration of the Log Analyzer and Incident Detector CLI processing operational log scenarios and generating multi-format reports:
+Launch the graphical interface from the packaged JAR:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
+```
+
+The database incident sample opens automatically, so the dashboard is immediately usable. From there you can:
+
+1. Choose one of the four bundled scenarios or open a local `.log` or `.txt` file.
+2. Review summary metrics, the activity chart, log-level distribution, and recurring errors.
+3. Select an incident to inspect its severity, category, evidence, and recommended actions.
+4. Open **View related logs** to filter the log explorer to the selected incident's evidence.
+5. Search messages, loggers, or thread names; filter by level; and double-click a row to inspect its stack trace.
+6. Change the burst threshold or detection window under **Detection settings**. The current source is analyzed again automatically.
+7. Export the current analysis as a JSON report.
+
+The interface requires a graphical desktop environment. Analysis runs in a background Swing worker so the window remains responsive while a file is processed.
+
+### Wayland, Niri, and Hyprland
+
+Java 21 Swing uses XWayland in Wayland sessions. The launcher detects Wayland, Niri, and Hyprland, then applies the required non-reparenting and Java2D compatibility settings automatically.
+
+On Niri installations without built-in XWayland integration, install and start `xwayland-satellite`, then confirm that it provides a display:
+
+```bash
+echo "$DISPLAY"
+pgrep -a xwayland-satellite
+```
+
+If automatic environment detection is unavailable, launch with the equivalent settings manually:
+
+```bash
+_JAVA_AWT_WM_NONREPARENTING=1 java -Dsun.java2d.opengl=false \
+  -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
+```
+
+---
+
+## Command-Line Usage
+
+Run the bundled demonstration suite:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
+```
+
+Running the JAR without arguments also starts demonstration mode.
+
+Analyze one log file and print the console report:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar \
+  --file sample-logs/critical-incident-database.log
+```
+
+Generate Markdown or JSON output:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar \
+  --file sample-logs/security-attack.log \
+  --format markdown \
+  --output security-report.md
+
+java -jar target/log-analyzer-incident-detector-1.0.0.jar \
+  --file sample-logs/out-of-memory.log \
+  --format json \
+  --output oom-report.json
+```
+
+Customize sliding-window error-burst detection:
+
+```bash
+java -jar target/log-analyzer-incident-detector-1.0.0.jar \
+  --file sample-logs/security-attack.log \
+  --burst-threshold 10 \
+  --window 120
+```
+
+### Options
+
+| Option | Short flag | Description | Default |
+| :--- | :---: | :--- | :--- |
+| `--file <path>` | `-f` | Analyze a local log file | Required in single-file mode |
+| `--format <type>` | `-fmt` | Report format: `console`, `markdown` (`md`), or `json` | `console` |
+| `--output <path>` | `-o` | Write the report to a file instead of standard output | Standard output |
+| `--burst-threshold <n>` | `-b` | Number of errors required to trigger a burst | `5` |
+| `--window <seconds>` | `-w` | Sliding detection window in seconds | `60` |
+| `--gui` | — | Start the native desktop application | `false` |
+| `--demo` | — | Analyze all four bundled scenarios | Used when no arguments are given |
+| `--help` | `-h` | Show CLI help | — |
+
+`--gui` cannot be combined with `--demo` or a file argument. Configure detection thresholds inside the desktop application after it opens.
+
+### Exit Codes
+
+#### Single-file analysis
+
+| Code | Meaning |
+| :---: | :--- |
+| `0` | Analysis completed without critical incidents. |
+| `1` | Arguments were invalid, a file could not be read, or execution failed. |
+| `2` | At least one `CRITICAL` operational incident was detected. |
+
+#### Demonstration mode
+
+| Code | Meaning |
+| :---: | :--- |
+| `0` | The suite completed, including when a bundled scenario contains critical incidents. |
+| `1` | The demonstration could not complete because of an execution error. |
+
+---
+
+## Supported Log Formats
+
+The parser reads UTF-8 text files and recognizes standard, bracketed, and simplified records:
+
+```text
+2026-11-03 01:14:02.123 [worker-1] ERROR com.example.Service - Request failed
+[2026-11-03 01:14:02.123] [ERROR] [worker-1] [com.example.Service] Request failed
+2026-11-03T01:14:02Z ERROR Request failed
+```
+
+Dates may use `-` or `/`, timestamps may use a space or `T`, and fractional seconds and UTC offsets are optional. Calendar dates are validated strictly. Unrecognized lines are retained as continuations or `UNKNOWN` entries, and multiline Java stack traces—including `Caused by:` chains—remain attached to their parent entry.
+
+---
+
+## Application Screenshots
+
+The following examples show the CLI processing operational scenarios and generating multi-format reports:
 
 ### 1. Normal Operations
 Terminal dashboard showing clean analysis of routine HTTP operations with 0 anomalies and 0 incidents detected:
@@ -117,7 +267,7 @@ Structured JSON report payload containing detailed metadata, level distributions
 
 ---
 
-##  Technologies Used
+## Technologies Used
 
 * **Java 21 (LTS):** Built using modern Java features including:
   * **Records:** Immutable configuration record (`CliConfig`).
@@ -133,7 +283,7 @@ Structured JSON report payload containing detailed metadata, level distributions
 
 ---
 
-##  Architecture & OOP Design
+## Architecture & OOP Design
 
 The application follows clean object-oriented architecture, applying design patterns for modularity and testability:
 
@@ -148,6 +298,7 @@ flowchart TD
     E --> H["AnalysisResult"]
     G --> H
     H --> I["AbstractReportGenerator (Template Method Pattern)"]
+    H --> M["Swing Desktop Dashboard"]
     I --> J["ConsoleReportGenerator"]
     I --> K["MarkdownReportGenerator"]
     I --> L["JsonReportGenerator"]
@@ -162,7 +313,7 @@ flowchart TD
 
 ---
 
-##  Project Structure
+## Project Structure
 
 ```text
 Log-Analyzer-Incident-Detector/
@@ -208,7 +359,7 @@ Log-Analyzer-Incident-Detector/
 └── src/
     ├── main/
     │   ├── java/com/loganalyzer/
-    │   │   ├── Main.java                       # CLI entry point & argument parsing
+    │   │   ├── Main.java                       # Application entry point & CLI parsing
     │   │   ├── analyzer/                       # LogAnalyzer, AnomalyDetector, IncidentDetector
     │   │   ├── exception/                      # Domain exceptions (InvalidLogFileException)
     │   │   ├── model/                          # Domain models (LogEntry, Anomaly, Incident)
@@ -232,9 +383,9 @@ Log-Analyzer-Incident-Detector/
 
 ---
 
-##  Development Phases
+## Development Phases
 
-The project was developed in three systematic, documented engineering phases:
+The core analysis engine was developed in three systematic, documented engineering phases:
 
 ### Phase 1: Bug Fixes & Code Quality (6 Tasks)
 * [**Task 1: Security Anomaly Filtering**](docs/development-reports/Phase-1/Task-1/TASK-1-SECURITY-FIX-REPORT.md) — Eliminated false positives in security anomaly detection by restricting pattern matching to appropriate log levels and adding negative test cases.
@@ -261,137 +412,7 @@ The project was developed in three systematic, documented engineering phases:
 
 ---
 
-##  Prerequisites
-
-* **Java Development Kit (JDK):** Version 21 or higher
-* **Apache Maven:** Version 3.8 or higher
-* **Git:** For source code control
-
-Verify your local environment:
-```bash
-java -version
-mvn -version
-git --version
-```
-
----
-
-##  Getting Started
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/dotexeYash/Log-Analyzer-Incident-Detector.git
-cd Log-Analyzer-Incident-Detector
-```
-
-### 2. Build and Package
-```bash
-mvn clean package
-```
-This compiles the code, executes the automated test suite (144 tests), and produces the executable JAR:
-`target/log-analyzer-incident-detector-1.0.0.jar`.
-
-### 3. Run the Demonstration Suite
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
-```
-
-### 4. Start the Java Desktop Interface
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
-```
-
-The desktop application includes four bundled scenarios, local file selection, adjustable anomaly thresholds, incident details, searchable evidence, an activity chart, and JSON export. It uses only standard Java 21 APIs.
-
-#### Niri, Hyprland, and Wayland
-
-Swing runs through XWayland on Java 21. The launcher detects Niri, Hyprland, and other Wayland sessions automatically, enables Java's non-reparenting window-manager mode, disables the problematic OpenGL pipeline, and uses the cross-platform Swing look and feel.
-
-Niri does not provide built-in XWayland integration on all installations. Ensure `xwayland-satellite` is installed and running, and verify that it provides a display:
-
-```bash
-echo "$DISPLAY"
-pgrep -a xwayland-satellite
-```
-
-After the XWayland bridge is available, use the normal command:
-
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
-```
-
-If the environment is not detected automatically, the equivalent manual launch is:
-
-```bash
-_JAVA_AWT_WM_NONREPARENTING=1 java -Dsun.java2d.opengl=false -jar target/log-analyzer-incident-detector-1.0.0.jar --gui
-```
-
----
-
-##  Usage Examples
-
-### 1. Run Demonstration Mode
-Analyzes all bundled sample scenarios back-to-back:
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar --demo
-```
-
-### 2. Analyze a Specific Log File
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/critical-incident-database.log
-```
-
-### 3. Generate a Markdown Incident Report
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/security-attack.log -fmt markdown -o security-report.md
-```
-
-### 4. Generate a Machine-Readable JSON Report
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/out-of-memory.log -fmt json -o oom-report.json
-```
-
-### 5. Customize Anomaly Detection Thresholds
-Configure custom sliding-window error burst parameters:
-```bash
-java -jar target/log-analyzer-incident-detector-1.0.0.jar -f sample-logs/security-attack.log -b 10 -w 120
-```
-* `-b 10` — Trigger error burst anomaly upon 10 errors.
-* `-w 120` — Set sliding detection window to 120 seconds.
-
----
-
-##  Command-Line Reference
-
-| Option | Short Flag | Description | Default |
-| :--- | :--- | :--- | :--- |
-| `--file <path>` | `-f` | Path to target log file to inspect | Required (unless in demo mode) |
-| `--format <type>` | `-fmt` | Output format: `console`, `markdown` (`md`), `json` | `console` |
-| `--output <path>` | `-o` | Destination file path to save report | Standard output |
-| `--burst-threshold <n>`| `-b` | Consecutive error burst threshold | `5` |
-| `--window <seconds>` | `-w` | Burst detection time window in seconds | `60` |
-| `--gui` | — | Start the native Java desktop interface | `false` |
-| `--demo` | — | Execute demonstration against bundled scenarios | `false` |
-| `--help` | `-h` | Display usage instructions and exit | — |
-
-### Exit Codes
-
-#### Single-File Analysis (`-f` / `--file`)
-| Code | Meaning |
-| :---: | :--- |
-| **`0`** | Analysis completed successfully without critical incidents. |
-| **`1`** | Invalid arguments, unreadable file, or execution error. |
-| **`2`** | One or more **`CRITICAL`** operational incidents detected (e.g., JVM crashes, DB connection pool outages). |
-
-#### Demonstration Mode (`--demo`)
-| Code | Meaning |
-| :---: | :--- |
-| **`0`** | Demonstration suite finished execution successfully, even if individual sample scenarios detect critical incidents. |
-| **`1`** | Execution error occurred during the demonstration suite. |
-
----
-
-##  Testing & Verification
+## Testing & Verification
 
 The project enforces quality assurance through unit tests, parameterized tests, boundary tests, and end-to-end integration workflows.
 
@@ -443,7 +464,7 @@ mvn test
 
 ---
 
-##  Future Improvements
+## Future Improvements
 
 * Support real-time log tailing and streaming via WebSockets.
 * Introduce configurable alerting webhooks (Slack, PagerDuty, Email).
@@ -452,7 +473,7 @@ mvn test
 
 ---
 
-##  Author
+## Author
 
 **Yash Lowanshi**<br>
 B.Tech — Computer Science and Engineering<br>
